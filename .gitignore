@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.sqlite3
+instance/
+venv/
+env/
+ENV/
+.env
+*.log
+
+# Frontend
+dist/
+build/
+.vite/
+.cache/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.kovs/
+
+# OS
+Thumbs.db
+.DS_Store

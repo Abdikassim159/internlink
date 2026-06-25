@@ -1,0 +1,225 @@
+
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+import json
+
+db = SQLAlchemy()
+
+class User(db.Model):
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    full_name = db.Column(db.String(100), nullable=False, default='User')
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='student')
+    
+    is_verified = db.Column(db.Boolean, default=False)
+    verification_token = db.Column(db.String(100), unique=True)
+    token_created_at = db.Column(db.DateTime)
+    verified_at = db.Column(db.DateTime)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    student_profile = db.relationship('StudentProfile', backref='user', uselist=False, cascade='all, delete-orphan')
+    employer_profile = db.relationship('EmployerProfile', backref='user', uselist=False, cascade='all, delete-orphan')
+    applications = db.relationship('Application', backref='student', lazy=True, cascade='all, delete-orphan')
+    posted_opportunities = db.relationship('Opportunity', backref='employer', lazy=True, cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'full_name': self.full_name,
+            'email': self.email,
+            'role': self.role,
+            'is_verified': self.is_verified,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class StudentProfile(db.Model):
+    __tablename__ = 'student_profiles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    
+    full_name = db.Column(db.String(100), nullable=False)
+    registration_number = db.Column(db.String(50), unique=True)
+    course = db.Column(db.String(100), nullable=False)
+    university = db.Column(db.String(100), nullable=False)
+    year_of_study = db.Column(db.Integer, nullable=False, default=1)
+    
+    skills = db.Column(db.Text, default='[]')
+    bio = db.Column(db.Text)
+    location = db.Column(db.String(100))
+    phone = db.Column(db.String(20))
+    cv_url = db.Column(db.String(200))
+    profile_image = db.Column(db.String(200))
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def get_skills(self):
+        return json.loads(self.skills) if self.skills else []
+    
+    def set_skills(self, skills_list):
+        self.skills = json.dumps(skills_list)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'full_name': self.full_name,
+            'registration_number': self.registration_number,
+            'course': self.course,
+            'university': self.university,
+            'year_of_study': self.year_of_study,
+            'skills': self.get_skills(),
+            'bio': self.bio,
+            'location': self.location,
+            'phone': self.phone,
+            'cv_url': self.cv_url,
+            'profile_image': self.profile_image
+        }
+
+
+class EmployerProfile(db.Model):
+    __tablename__ = 'employer_profiles'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    
+    company_name = db.Column(db.String(100), nullable=False)
+    company_description = db.Column(db.Text)
+    industry = db.Column(db.String(50))
+    location = db.Column(db.String(100))
+    website = db.Column(db.String(200))
+    logo_url = db.Column(db.String(200))
+    verified = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Opportunity(db.Model):
+    __tablename__ = 'opportunities'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    employer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    title = db.Column(db.String(100), nullable=False)
+    company_name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.String(20), nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    duration = db.Column(db.String(50))
+    stipend = db.Column(db.String(50))
+    deadline = db.Column(db.DateTime, nullable=False)
+    
+    description = db.Column(db.Text, nullable=False)
+    requirements = db.Column(db.Text)
+    required_courses = db.Column(db.Text, default='[]')
+    required_skills = db.Column(db.Text, default='[]')
+    
+    is_active = db.Column(db.Boolean, default=True)
+    is_featured = db.Column(db.Boolean, default=False)
+    slots = db.Column(db.Integer, default=1)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    applications = db.relationship('Application', backref='opportunity', lazy=True, cascade='all, delete-orphan')
+    
+    def get_required_courses(self):
+        return json.loads(self.required_courses) if self.required_courses else []
+    
+    def set_required_courses(self, courses_list):
+        self.required_courses = json.dumps(courses_list)
+    
+    def get_required_skills(self):
+        return json.loads(self.required_skills) if self.required_skills else []
+    
+    def set_required_skills(self, skills_list):
+        self.required_skills = json.dumps(skills_list)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'employer_id': self.employer_id,
+            'title': self.title,
+            'company_name': self.company_name,
+            'type': self.type,
+            'location': self.location,
+            'duration': self.duration,
+            'stipend': self.stipend,
+            'deadline': self.deadline.isoformat() if self.deadline else None,
+            'description': self.description,
+            'requirements': self.requirements,
+            'required_courses': self.get_required_courses(),
+            'required_skills': self.get_required_skills(),
+            'is_active': self.is_active,
+            'is_featured': self.is_featured,
+            'slots': self.slots,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class Application(db.Model):
+    __tablename__ = 'applications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    opportunity_id = db.Column(db.Integer, db.ForeignKey('opportunities.id'), nullable=False)
+    
+    full_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    course = db.Column(db.String(100), nullable=False)
+    university = db.Column(db.String(100), nullable=False)
+    year_of_study = db.Column(db.String(20), nullable=False)
+    domain = db.Column(db.String(50), nullable=False)
+    cover_letter = db.Column(db.Text)
+    resume_url = db.Column(db.String(200))
+    
+    status = db.Column(db.String(20), default='pending')
+    match_score = db.Column(db.Float)
+    admin_notes = db.Column(db.Text)
+    
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('student_id', 'opportunity_id', name='unique_application'),)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'student_id': self.student_id,
+            'opportunity_id': self.opportunity_id,
+            'full_name': self.full_name,
+            'email': self.email,
+            'phone': self.phone,
+            'course': self.course,
+            'university': self.university,
+            'year_of_study': self.year_of_study,
+            'domain': self.domain,
+            'cover_letter': self.cover_letter,
+            'resume_url': self.resume_url,
+            'status': self.status,
+            'match_score': self.match_score,
+            'admin_notes': self.admin_notes,
+            'applied_at': self.applied_at.isoformat() if self.applied_at else None,
+            'reviewed_at': self.reviewed_at.isoformat() if self.reviewed_at else None,
+            'opportunity': self.opportunity.to_dict() if self.opportunity else None
+        }
+
+
+class SavedOpportunity(db.Model):
+    __tablename__ = 'saved_opportunities'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    opportunity_id = db.Column(db.Integer, db.ForeignKey('opportunities.id'), nullable=False)
+    saved_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('student_id', 'opportunity_id', name='unique_saved'),)

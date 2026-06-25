@@ -1,0 +1,146 @@
+### 1. Login as Employer (Get Token)
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "employer@example.com",
+    "password": "password123"
+}
+
+### 2. Login as Admin (Get Token)
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@internlink.com",
+    "password": "password123"
+}
+
+### 3. Add Opportunity 1 - Software Developer Intern (Use token from step 1)
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "Software Developer Intern",
+    "company_name": "Safaricom",
+    "type": "Internship",
+    "location": "Nairobi",
+    "duration": "6 months",
+    "stipend": "KES 25,000/month",
+    "deadline": "2026-09-30T00:00:00",
+    "description": "Join our engineering team to build cutting-edge mobile and web applications.",
+    "requirements": "3rd or 4th year Computer Science student",
+    "required_skills": ["React", "Python", "Java", "SQL"]
+}
+
+### 4. Add Opportunity 2 - Finance Attachment
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "Finance Attachment",
+    "company_name": "KCB Bank",
+    "type": "Attachment",
+    "location": "Nairobi",
+    "duration": "3 months",
+    "stipend": "KES 15,000/month",
+    "deadline": "2026-09-15T00:00:00",
+    "description": "Gain hands-on experience in banking operations and financial analysis.",
+    "requirements": "2nd or 3rd year Finance/Accounting student",
+    "required_skills": ["Excel", "Financial Analysis", "Accounting"]
+}
+
+### 5. Add Opportunity 3 - Data Science Intern
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "Data Science Intern",
+    "company_name": "Twiga Foods",
+    "type": "Internship",
+    "location": "Nairobi",
+    "duration": "6 months",
+    "stipend": "KES 30,000/month",
+    "deadline": "2026-09-25T00:00:00",
+    "description": "Work with real agricultural and supply chain data to build predictive models.",
+    "requirements": "Strong analytical skills",
+    "required_skills": ["Python", "SQL", "Machine Learning", "Pandas"]
+}
+
+### 6. Add Opportunity 4 - Marketing Intern
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "Marketing Intern",
+    "company_name": "Equity Bank",
+    "type": "Internship",
+    "location": "Kisumu",
+    "duration": "4 months",
+    "stipend": "KES 20,000/month",
+    "deadline": "2026-08-20T00:00:00",
+    "description": "Join our marketing team to develop and execute campaigns.",
+    "requirements": "Creative mindset. Excellent communication skills.",
+    "required_skills": ["Social Media", "Content Writing", "SEO"]
+}
+
+### 7. Add Opportunity 5 - IT Support Attachment
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "IT Support Attachment",
+    "company_name": "Microsoft",
+    "type": "Attachment",
+    "location": "Remote",
+    "duration": "3 months",
+    "stipend": "KES 20,000/month",
+    "deadline": "2026-10-01T00:00:00",
+    "description": "Provide technical support to enterprise clients.",
+    "requirements": "Good problem-solving skills",
+    "required_skills": ["Windows", "Networking", "Customer Support"]
+}
+
+### 8. Add Opportunity 6 - Graduate Trainee
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "Graduate Trainee - Engineering",
+    "company_name": "KenGen",
+    "type": "Graduate Trainee",
+    "location": "Nakuru",
+    "duration": "1 year",
+    "stipend": "KES 40,000/month",
+    "deadline": "2026-09-20T00:00:00",
+    "description": "Join our graduate trainee program in electrical engineering.",
+    "requirements": "Recent graduate. Upper second class honors.",
+    "required_skills": ["AutoCAD", "Project Management"]
+}
+
+### 9. Add Opportunity 7 - UI/UX Design Intern
+POST http://localhost:5000/api/opportunities
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN_HERE
+
+{
+    "title": "UI/UX Design Intern",
+    "company_name": "Cellulant",
+    "type": "Internship",
+    "location": "Nairobi",
+    "duration": "6 months",
+    "stipend": "KES 22,000/month",
+    "deadline": "2026-09-10T00:00:00",
+    "description": "Design user-friendly interfaces for mobile and web applications.",
+    "requirements": "Portfolio required. Knowledge of design tools.",
+    "required_skills": ["Figma", "UI Design", "User Research"]
+}
+
+### 10. Get All Opportunities (Check if added)
+GET http://localhost:5000/api/opportunities
