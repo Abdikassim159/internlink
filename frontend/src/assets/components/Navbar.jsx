@@ -1,13 +1,14 @@
-// src/components/Layout/Navbar.jsx
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,13 +18,36 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }, [location.pathname]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsDropdownOpen(false);
+    navigate('/');
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.split('@')[0];
+    return parts.slice(0, 2).toUpperCase();
+  };
+
   const isActive = (path) => location.pathname === path;
 
   return (
     <nav className={`sticky top-0 z-50 transition-all duration-300 ${
-      isScrolled 
-        ? "bg-white/95 backdrop-blur-md shadow-lg" 
-        : "bg-white shadow-md"
+      isScrolled ? "bg-white/95 backdrop-blur-md shadow-lg" : "bg-white shadow-sm"
     }`}>
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex justify-between items-center h-16">
@@ -31,101 +55,127 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-blue-900 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
+              <span className="text-white font-bold text-lg">in</span>
             </div>
             <span className="font-semibold text-xl text-gray-900">
-              Attach<span className="text-blue-900">Hub</span>
+              Intern<span className="text-blue-900">Link</span>
             </span>
           </Link>
 
-          {/* Desktop Navigation - Clean Text Links */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link 
-              to="/" 
-              className={`text-sm font-medium transition ${
-                isActive("/") 
-                  ? "text-blue-900 border-b-2 border-blue-900 pb-1" 
-                  : "text-gray-600 hover:text-blue-900"
-              }`}
-            >
+            <Link to="/" className={`text-sm font-medium transition ${isActive("/") ? "text-blue-900 border-b-2 border-blue-900 pb-1" : "text-gray-600 hover:text-blue-900"}`}>
               Home
             </Link>
-            
-            <Link 
-              to="/opportunities" 
-              className={`text-sm font-medium transition ${
-                isActive("/opportunities") 
-                  ? "text-blue-900 border-b-2 border-blue-900 pb-1" 
-                  : "text-gray-600 hover:text-blue-900"
-              }`}
-            >
+            <Link to="/opportunities" className={`text-sm font-medium transition ${isActive("/opportunities") ? "text-blue-900 border-b-2 border-blue-900 pb-1" : "text-gray-600 hover:text-blue-900"}`}>
               Find Attachment
             </Link>
-            
-            <Link 
-              to="/companies" 
-              className={`text-sm font-medium transition ${
-                isActive("/companies") 
-                  ? "text-blue-900 border-b-2 border-blue-900 pb-1" 
-                  : "text-gray-600 hover:text-blue-900"
-              }`}
-            >
+            <Link to="/companies" className={`text-sm font-medium transition ${isActive("/companies") ? "text-blue-900 border-b-2 border-blue-900 pb-1" : "text-gray-600 hover:text-blue-900"}`}>
               Companies
             </Link>
             
-            <Link 
-              to="/success-stories" 
-              className={`text-sm font-medium transition ${
-                isActive("/success-stories") 
-                  ? "text-blue-900 border-b-2 border-blue-900 pb-1" 
-                  : "text-gray-600 hover:text-blue-900"
-              }`}
-            >
-              Success Stories
-            </Link>
+            {/* ✅ DASHBOARD LINK - VISIBLE WHEN LOGGED IN */}
+            {user && (
+              <Link to="/student/dashboard" className={`text-sm font-medium transition ${isActive("/student/dashboard") ? "text-blue-900 border-b-2 border-blue-900 pb-1" : "text-gray-600 hover:text-blue-900"}`}>
+                📊 Dashboard
+              </Link>
+            )}
             
-            <Link 
-              to="/resources" 
-              className={`text-sm font-medium transition ${
-                isActive("/resources") 
-                  ? "text-blue-900 border-b-2 border-blue-900 pb-1" 
-                  : "text-gray-600 hover:text-blue-900"
-              }`}
-            >
-              Resources
-            </Link>
+            {user && user.role === 'admin' && (
+              <Link to="/admin" className="text-sm font-medium text-blue-900 hover:text-blue-700 transition">
+                Admin
+              </Link>
+            )}
             
             {!user ? (
               <div className="flex items-center space-x-4 ml-4">
-                <Link 
-                  to="/login" 
-                  className="text-sm font-medium text-gray-600 hover:text-blue-900 transition"
-                >
-                  Sign In
-                </Link>
-                <Link 
-                  to="/register" 
-                  className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition shadow-sm"
-                >
-                  Get Started
-                </Link>
+                <Link to="/student-login" className="text-sm font-medium text-gray-600 hover:text-blue-900 transition">Sign In</Link>
+                <Link to="/student-register" className="bg-blue-900 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition shadow-sm">Get Started</Link>
               </div>
             ) : (
-              <div className="relative group ml-4">
-                <button className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-900 transition">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 text-sm">JD</span>
+              <div className="relative ml-4">
+                {/* User Avatar Dropdown */}
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 focus:outline-none group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-semibold text-sm shadow-md hover:shadow-lg transition">
+                    {getInitials(user.full_name || user.email)}
                   </div>
-                  <span>Account</span>
+                  <svg 
+                    className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
-                <div className="absolute right-0 w-48 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                  <Link to="/student/dashboard" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Dashboard</Link>
-                  <Link to="/student/applications" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">My Applications</Link>
-                  <Link to="/student/logbook" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Digital Logbook</Link>
-                  <Link to="/student/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile</Link>
-                  <hr className="my-1" />
-                  <button className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Sign Out</button>
-                </div>
+
+                {/* Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-fadeIn">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {user.full_name || user.email?.split('@')[0] || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                      <span className="inline-block mt-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full capitalize">
+                        {user.role || 'Student'}
+                      </span>
+                    </div>
+
+                    <Link
+                      to="/student/dashboard"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      📊 Dashboard
+                    </Link>
+
+                    <Link
+                      to="/applications"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      📝 My Applications
+                    </Link>
+                    <Link
+                      to="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      👤 My Profile
+                    </Link>
+                    <Link
+                      to="/saved-jobs"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      ❤️ Saved Jobs
+                    </Link>
+                    
+                    {user && user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        ⚙️ Admin Dashboard
+                      </Link>
+                    )}
+
+                    <div className="border-t border-gray-100 mt-1 pt-1">
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition rounded-b-xl"
+                      >
+                        🚪 Sign Out
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -153,24 +203,51 @@ const Navbar = () => {
             <Link to="/" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
             <Link to="/opportunities" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Find Attachment</Link>
             <Link to="/companies" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Companies</Link>
-            <Link to="/success-stories" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Success Stories</Link>
-            <Link to="/resources" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Resources</Link>
+            
+            {/* ✅ DASHBOARD LINK IN MOBILE MENU */}
+            {user && (
+              <Link to="/student/dashboard" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>
+                📊 Dashboard
+              </Link>
+            )}
+            
+            {user && user.role === 'admin' && (
+              <Link to="/admin" className="block text-blue-900 hover:text-blue-700" onClick={() => setIsMobileMenuOpen(false)}>Admin</Link>
+            )}
+            
             <hr className="my-2" />
             {!user ? (
               <>
-                <Link to="/login" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Sign In</Link>
-                <Link to="/register" className="block bg-blue-900 text-white px-4 py-2 rounded-lg text-center" onClick={() => setIsMobileMenuOpen(false)}>Get Started</Link>
+                <Link to="/student-login" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Sign In</Link>
+                <Link to="/student-register" className="block bg-blue-900 text-white px-4 py-2 rounded-lg text-center" onClick={() => setIsMobileMenuOpen(false)}>Get Started</Link>
               </>
             ) : (
               <>
-                <Link to="/student/dashboard" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
-                <Link to="/student/applications" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>My Applications</Link>
-                <button className="block text-red-600 w-full text-left">Sign Out</button>
+                <Link to="/student/dashboard" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>📊 Dashboard</Link>
+                <Link to="/applications" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>📝 My Applications</Link>
+                <Link to="/profile" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>👤 My Profile</Link>
+                <button onClick={handleLogout} className="block text-red-600 w-full text-left">Sign Out</button>
               </>
             )}
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+      `}</style>
     </nav>
   );
 };

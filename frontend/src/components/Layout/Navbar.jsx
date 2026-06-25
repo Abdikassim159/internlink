@@ -74,6 +74,13 @@ const Navbar = () => {
               Companies
             </Link>
             
+            {/* ✅ Dashboard - Only here in navbar, NOT in dropdown */}
+            {user && (
+              <Link to="/student/dashboard" className={`text-sm font-medium transition ${isActive("/student/dashboard") ? "text-blue-900 border-b-2 border-blue-900 pb-1" : "text-gray-600 hover:text-blue-900"}`}>
+                Dashboard
+              </Link>
+            )}
+            
             {user && user.role === 'admin' && (
               <Link to="/admin" className="text-sm font-medium text-blue-900 hover:text-blue-700 transition">
                 Admin
@@ -105,9 +112,10 @@ const Navbar = () => {
                   </svg>
                 </button>
 
-                {/* Dropdown Menu */}
+                {/* Dropdown Menu - NO Dashboard here */}
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-fadeIn">
+                    {/* User Info */}
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900">
                         {user.full_name || user.email?.split('@')[0] || 'User'}
@@ -118,26 +126,20 @@ const Navbar = () => {
                       </span>
                     </div>
 
+                    {/* ✅ Applications and Profile - Clean without icons */}
                     <Link
                       to="/applications"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      📝 My Applications
+                      My Applications
                     </Link>
                     <Link
                       to="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
                       onClick={() => setIsDropdownOpen(false)}
                     >
-                      👤 My Profile
-                    </Link>
-                    <Link
-                      to="/saved-jobs"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      ❤️ Saved Jobs
+                      My Profile
                     </Link>
                     
                     {user && user.role === 'admin' && (
@@ -146,7 +148,7 @@ const Navbar = () => {
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 transition"
                         onClick={() => setIsDropdownOpen(false)}
                       >
-                        ⚙️ Admin Dashboard
+                        Admin Dashboard
                       </Link>
                     )}
 
@@ -155,7 +157,7 @@ const Navbar = () => {
                         onClick={handleLogout}
                         className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition rounded-b-xl"
                       >
-                        🚪 Sign Out
+                        Sign Out
                       </button>
                     </div>
                   </div>
@@ -187,6 +189,12 @@ const Navbar = () => {
             <Link to="/" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
             <Link to="/opportunities" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Find Attachment</Link>
             <Link to="/companies" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>Companies</Link>
+            
+            {user && (
+              <Link to="/student/dashboard" className="block text-gray-600 hover:text-blue-900" onClick={() => setIsMobileMenuOpen(false)}>
+                Dashboard
+              </Link>
+            )}
             
             {user && user.role === 'admin' && (
               <Link to="/admin" className="block text-blue-900 hover:text-blue-700" onClick={() => setIsMobileMenuOpen(false)}>Admin</Link>

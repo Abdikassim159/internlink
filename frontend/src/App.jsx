@@ -10,6 +10,7 @@ import ApplyNow from './pages/ApplyNow';
 import MyApplications from './pages/MyApplications';
 import Companies from './pages/Companies';
 import Profile from './pages/Profile';
+import StudentDashboard from './pages/student/StudentDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import StudentLogin from './pages/StudentLogin';
@@ -30,7 +31,14 @@ function App() {
         <Route path="/student-register" element={<StudentRegister />} />
         <Route path="/verify-email/:token" element={<VerifyEmail />} />
         
-        {/* ✅ Apply Now - Authentication handled inside component */}
+        {/* Student Routes */}
+        <Route path="/student/dashboard" element={
+          <ProtectedRoute requiredRole="student">
+            <StudentDashboard />
+          </ProtectedRoute>
+        } />
+        
+        {/* Apply Now - Authentication handled inside component */}
         <Route path="/apply/:id" element={<ApplyNow />} />
         
         {/* Protected Routes */}

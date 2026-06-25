@@ -18,17 +18,13 @@ const MyApplications = () => {
     accepted: 0,
     rejected: 0
   });
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData));
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-      }
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/student-login');
+      return;
     }
     fetchApplications();
   }, []);
@@ -108,7 +104,6 @@ const MyApplications = () => {
     );
   }
 
-  // Professional error page - NO technical details!
   if (error) {
     return (
       <ErrorPage 
