@@ -1,6 +1,5 @@
-
 from app import create_app
-from models import db, User, StudentProfile, Opportunity, Application
+from models import db, User, StudentProfile, Opportunity, Application, SavedOpportunity
 from datetime import datetime, timedelta
 import bcrypt
 import json

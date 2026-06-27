@@ -43,12 +43,16 @@ def create_app():
     from routes.applications import applications_bp
     from routes.companies import companies_bp
     from routes.profile import profile_bp
+    from routes.mpesa import mpesa_bp
+    from routes.saved import saved_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(opportunities_bp, url_prefix='/api')
     app.register_blueprint(applications_bp, url_prefix='/api')
     app.register_blueprint(companies_bp, url_prefix='/api')
     app.register_blueprint(profile_bp, url_prefix='/api')
+    app.register_blueprint(mpesa_bp, url_prefix='/api')
+    app.register_blueprint(saved_bp, url_prefix='/api')
     
     # Test route
     @app.route('/api/health', methods=['GET'])

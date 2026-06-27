@@ -78,7 +78,6 @@ def get_all_applications():
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Check if user is admin
         if user.role != 'admin':
             return jsonify({'error': 'Permission denied. Admin only.'}), 403
         
@@ -87,12 +86,14 @@ def get_all_applications():
         result = []
         for app in applications:
             app_dict = app.to_dict()
-            # Add opportunity details
+            # ✅ Include full opportunity data
             if app.opportunity:
                 app_dict['opportunity'] = {
                     'id': app.opportunity.id,
                     'title': app.opportunity.title,
-                    'company_name': app.opportunity.company_name
+                    'company_name': app.opportunity.company_name,
+                    'type': app.opportunity.type,
+                    'location': app.opportunity.location
                 }
             result.append(app_dict)
         
@@ -109,9 +110,11 @@ def get_all_applications():
 @applications_bp.route('/applications/my', methods=['GET'])
 @jwt_required()
 def get_my_applications():
-    """Get current user's applications"""
+    """Get current user's applications with full opportunity data"""
     try:
         current_user_id = get_jwt_identity()
+        
+        print(f"Fetching applications for user: {current_user_id}")
         
         applications = Application.query.filter_by(
             student_id=current_user_id
@@ -119,15 +122,43 @@ def get_my_applications():
         
         result = []
         for app in applications:
-            app_dict = app.to_dict()
-            # Add opportunity details
+            # ✅ Convert application to dict
+            app_dict = {
+                'id': app.id,
+                'student_id': app.student_id,
+                'opportunity_id': app.opportunity_id,
+                'full_name': app.full_name,
+                'email': app.email,
+                'phone': app.phone,
+                'course': app.course,
+                'university': app.university,
+                'year_of_study': app.year_of_study,
+                'domain': app.domain,
+                'cover_letter': app.cover_letter,
+                'resume_url': app.resume_url,
+                'status': app.status,
+                'match_score': app.match_score,
+                'admin_notes': app.admin_notes,
+                'applied_at': app.applied_at.isoformat() if app.applied_at else None,
+                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None
+            }
+            
+            # ✅ Include full opportunity data
             if app.opportunity:
                 app_dict['opportunity'] = {
                     'id': app.opportunity.id,
                     'title': app.opportunity.title,
-                    'company_name': app.opportunity.company_name
+                    'company_name': app.opportunity.company_name,
+                    'type': app.opportunity.type,
+                    'location': app.opportunity.location,
+                    'stipend': app.opportunity.stipend,
+                    'deadline': app.opportunity.deadline.isoformat() if app.opportunity.deadline else None
                 }
+            else:
+                app_dict['opportunity'] = None
+            
             result.append(app_dict)
+            print(f"Application {app.id}: {app.status}, Type: {app.opportunity.type if app.opportunity else 'None'}")
         
         return jsonify({
             'applications': result,
@@ -147,7 +178,6 @@ def update_application_status(id):
         current_user_id = get_jwt_identity()
         user = User.query.get(current_user_id)
         
-        # Check if user is admin
         if user.role != 'admin':
             return jsonify({'error': 'Permission denied. Admin only.'}), 403
         
@@ -173,3 +203,28 @@ def update_application_status(id):
         print(f"Error updating application: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update application'}), 500
+
+
+@applications_bp.route('/applications/<int:id>', methods=['DELETE'])
+@jwt_required()
+def delete_application(id):
+    """Delete an application (Student can delete their own)"""
+    try:
+        current_user_id = get_jwt_identity()
+        application = Application.query.get_or_404(id)
+        
+        # Check if user owns this application
+        if application.student_id != current_user_id:
+            user = User.query.get(current_user_id)
+            if user.role != 'admin':
+                return jsonify({'error': 'Permission denied'}), 403
+        
+        db.session.delete(application)
+        db.session.commit()
+        
+        return jsonify({'message': 'Application deleted successfully'}), 200
+        
+    except Exception as e:
+        print(f"Error deleting application: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to delete application'}), 500

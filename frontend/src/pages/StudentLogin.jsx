@@ -52,7 +52,7 @@ const StudentLogin = () => {
         localStorage.removeItem('rememberedEmail');
       }
       
-      navigate('/opportunities');
+      navigate('/student/dashboard');
     } catch (error) {
       console.error('❌ Login error:', error);
       

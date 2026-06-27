@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import AdminNavbar from './AdminNavbar';
@@ -30,9 +29,17 @@ const RoleBasedLayout = ({ children }) => {
 
   // Check if current path is admin
   const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  // Check if current path is student dashboard
+  const isStudentDashboard = location.pathname === '/student/dashboard';
+  
+  // Check if current path is any dashboard
+  const isDashboardRoute = location.pathname.includes('/dashboard');
 
   console.log('Current route:', location.pathname);
   console.log('Is admin route?', isAdminRoute);
+  console.log('Is student dashboard?', isStudentDashboard);
+  console.log('Is dashboard route?', isDashboardRoute);
   console.log('User role:', userRole);
 
   if (loading) {
@@ -46,7 +53,31 @@ const RoleBasedLayout = ({ children }) => {
     );
   }
 
-  // Show admin navbar for admin users on admin routes
+  // ===== HIDE NAVBAR ON STUDENT DASHBOARD =====
+  if (isStudentDashboard) {
+    console.log('Showing Student Dashboard - NO NAVBAR');
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <main className="flex-grow">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // ===== HIDE NAVBAR ON ANY DASHBOARD ROUTE =====
+  if (isDashboardRoute) {
+    console.log('Showing Dashboard - NO NAVBAR');
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <main className="flex-grow">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
+  // ===== SHOW ADMIN NAVBAR FOR ADMIN ROUTES =====
   if (userRole === 'admin' && isAdminRoute) {
     console.log('Showing Admin Navbar');
     return (
@@ -60,7 +91,7 @@ const RoleBasedLayout = ({ children }) => {
     );
   }
 
-  // Show regular navbar for everyone else
+  // ===== SHOW DEFAULT NAVBAR FOR ALL OTHER ROUTES =====
   console.log('Showing Regular Navbar');
   return (
     <div className="min-h-screen flex flex-col">

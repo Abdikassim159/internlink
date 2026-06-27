@@ -1,9 +1,14 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
 
 const OpportunityCard = ({ opportunity, onSave, isSaved, viewMode = 'list' }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [saved, setSaved] = useState(isSaved);
+  const [saving, setSaving] = useState(false);
   
   const getDeadlineColor = (deadline) => {
     const daysLeft = Math.ceil((new Date(deadline) - new Date()) / (1000 * 60 * 60 * 24));
@@ -14,6 +19,38 @@ const OpportunityCard = ({ opportunity, onSave, isSaved, viewMode = 'list' }) =>
   };
 
   const deadlineInfo = getDeadlineColor(opportunity.deadline);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login to save jobs');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (saved) {
+        await axios.delete(`${API_URL}/saved/${opportunity.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setSaved(false);
+        if (onSave) onSave(opportunity.id, false);
+      } else {
+        await axios.post(`${API_URL}/saved/${opportunity.id}`, {}, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setSaved(true);
+        if (onSave) onSave(opportunity.id, true);
+      }
+    } catch (error) {
+      console.error('Error saving opportunity:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div 
@@ -43,16 +80,34 @@ const OpportunityCard = ({ opportunity, onSave, isSaved, viewMode = 'list' }) =>
               <p className="text-gray-600 text-sm">{opportunity.company}</p>
             </div>
             
-            {/* Match Percentage */}
-            {opportunity.matchPercentage && (
-              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                opportunity.matchPercentage >= 80 ? 'bg-green-100 text-green-700 border border-green-200' :
-                opportunity.matchPercentage >= 60 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                'bg-gray-100 text-gray-600 border border-gray-200'
-              }`}>
-                {opportunity.matchPercentage}% Match
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Save Button */}
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className={`p-2 rounded-lg transition ${
+                  saved 
+                    ? 'text-red-500 bg-red-50 hover:bg-red-100' 
+                    : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={saved ? 'Saved' : 'Save'}
+              >
+                <svg className="w-5 h-5" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
+              
+              {/* Match Percentage */}
+              {opportunity.matchPercentage && (
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  opportunity.matchPercentage >= 80 ? 'bg-green-100 text-green-700 border border-green-200' :
+                  opportunity.matchPercentage >= 60 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                  'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}>
+                  {opportunity.matchPercentage}% Match
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Details */}
@@ -102,20 +157,12 @@ const OpportunityCard = ({ opportunity, onSave, isSaved, viewMode = 'list' }) =>
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Save Button */}
-              <button
-                onClick={() => onSave(opportunity.id)}
-                className={`p-2 rounded-lg transition ${
-                  isSaved ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-                }`}
-                title={isSaved ? 'Saved' : 'Save'}
+              <Link
+                to={`/opportunity/${opportunity.id}`}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                <svg className="w-5 h-5" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
-              
-              {/* ✅ Apply Now Button - Redirects to login if not authenticated */}
+                View Details →
+              </Link>
               <Link
                 to={`/apply/${opportunity.id}`}
                 className="px-5 py-2 bg-blue-900 text-white text-sm font-medium rounded-lg hover:bg-blue-800 transition shadow-sm hover:shadow-md"
