@@ -7,18 +7,18 @@ import HireTalentSection from '../assets/components/HireTalentSection'
 import DiscoverSection from '../assets/components/DiscoverSection'
 import TestimonialsSection from '../assets/components/TestimonialsSection'
 import ReadyToStartSection from '../assets/components/ReadyToStartSection '
+import OurPurpose from '../assets/components/OurPurpose'
+import HowItWorks from '../assets/components/HowItWorks'
+import WhyChooseUs from '../assets/components/WhyChooseUs'
 
 const Home = () => {
   return (
     <div>
         <HeroSection />
-        <PlatformFeatures />
-        <TrustedBy />
-        <SmartWaySection />
-        <HireTalentSection />
-        <DiscoverSection />
-        <TestimonialsSection />
-        <ReadyToStartSection />
+        <OurPurpose />
+        <HowItWorks />
+        <WhyChooseUs />
+
         
         
 

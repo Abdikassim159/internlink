@@ -223,3 +223,40 @@ class SavedOpportunity(db.Model):
     saved_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (db.UniqueConstraint('student_id', 'opportunity_id', name='unique_saved'),)
+
+
+    # models.py - Add this class
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sender_name = db.Column(db.String(100), default='Admin')
+    sender_role = db.Column(db.String(50), default='admin')
+    subject = db.Column(db.String(255))
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    is_important = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    student = db.relationship('User', foreign_keys=[student_id], backref='received_messages')
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'student_id': self.student_id,
+            'sender_id': self.sender_id,
+            'sender_name': self.sender_name,
+            'sender_role': self.sender_role,
+            'subject': self.subject,
+            'message': self.message,
+            'is_read': self.is_read,
+            'is_important': self.is_important,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

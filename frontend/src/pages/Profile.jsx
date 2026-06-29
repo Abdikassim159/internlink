@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { X, Save, Edit2, User, Mail, Phone, MapPin, GraduationCap, BookOpen, Calendar, FileText, Plus, Trash2 } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -46,7 +46,6 @@ const Profile = () => {
     try {
       const token = localStorage.getItem('token');
       
-      // Update profile
       await axios.put(`${API_URL}/profile`, 
         {
           fullName: editData.fullName,
@@ -120,7 +119,7 @@ const Profile = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F5831F] mx-auto mb-4"></div>
           <p className="text-gray-500">Loading profile...</p>
         </div>
       </div>
@@ -134,7 +133,7 @@ const Profile = () => {
           <div className="text-5xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Profile</h2>
           <p className="text-gray-500 mb-4">{error || 'Profile not found'}</p>
-          <button onClick={() => window.location.reload()} className="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition">
+          <button onClick={() => window.location.reload()} className="bg-[#F5831F] text-white px-6 py-2 rounded-lg hover:bg-[#e0731a] transition">
             Try Again
           </button>
         </div>
@@ -143,7 +142,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-gray-50 py-8 lg:py-12">
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
         
         <div className="mb-8">
@@ -157,10 +156,16 @@ const Profile = () => {
           </div>
         )}
 
+        {error && (
+          <div className="bg-red-50 text-red-700 p-4 rounded-xl mb-6 border border-red-200">
+            {error}
+          </div>
+        )}
+
         {/* Profile Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="flex flex-wrap items-start gap-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#F5831F] to-[#e0731a] rounded-2xl flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
               {profile.fullName?.split(' ').map(n => n[0]).join('') || 'U'}
             </div>
             
@@ -171,41 +176,23 @@ const Profile = () => {
                   <p className="text-gray-500">{profile.email}</p>
                   <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-500">
                     <span className="flex items-center gap-1">
-                      🎓 {profile.course}, {profile.university}
+                      <GraduationCap className="w-4 h-4" /> {profile.course}, {profile.university}
                     </span>
                     <span className="flex items-center gap-1">
-                      📍 {profile.location}
+                      <MapPin className="w-4 h-4" /> {profile.location}
                     </span>
                     <span className="flex items-center gap-1">
-                      📅 {profile.yearOfStudy}
+                      <Calendar className="w-4 h-4" /> {profile.yearOfStudy}
                     </span>
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  {!isEditing ? (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition"
-                    >
-                      ✏️ Edit Profile
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleSave}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                      >
-                        💾 Save
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition"
-                      >
-                        ❌ Cancel
-                      </button>
-                    </>
-                  )}
-                </div>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#F5831F] text-white rounded-lg hover:bg-[#e0731a] transition shadow-md hover:shadow-lg"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit Profile
+                </button>
               </div>
             </div>
           </div>
@@ -215,7 +202,7 @@ const Profile = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-sm text-gray-500">Applied</p>
-            <p className="text-2xl font-bold text-blue-900">{profile.stats?.applied || 0}</p>
+            <p className="text-2xl font-bold text-[#F5831F]">{profile.stats?.applied || 0}</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
             <p className="text-sm text-gray-500">Shortlisted</p>
@@ -233,159 +220,62 @@ const Profile = () => {
 
         {/* Personal Information */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Personal Information</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <User className="w-5 h-5 text-[#F5831F]" />
+            Personal Information
+          </h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.fullName || ''}
-                  onChange={(e) => setEditData({...editData, fullName: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-900">{profile.fullName}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.fullName}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  value={editData.email || ''}
-                  onChange={(e) => setEditData({...editData, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-900">{profile.email}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.email}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  value={editData.phone || ''}
-                  onChange={(e) => setEditData({...editData, phone: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-900">{profile.phone || 'Not provided'}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.phone || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.location || ''}
-                  onChange={(e) => setEditData({...editData, location: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-900">{profile.location || 'Not provided'}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.location || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">University</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.university || ''}
-                  onChange={(e) => setEditData({...editData, university: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-900">{profile.university || 'Not provided'}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.university || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.course || ''}
-                  onChange={(e) => setEditData({...editData, course: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-900">{profile.course || 'Not provided'}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.course || 'Not provided'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Year of Study</label>
-              {isEditing ? (
-                <select
-                  value={editData.yearOfStudy || '1st Year'}
-                  onChange={(e) => setEditData({...editData, yearOfStudy: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                >
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                  <option value="4th Year">4th Year</option>
-                  <option value="Graduate">Graduate</option>
-                </select>
-              ) : (
-                <p className="text-gray-900">{profile.yearOfStudy || 'Not provided'}</p>
-              )}
+              <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">{profile.yearOfStudy || 'Not provided'}</p>
             </div>
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-              {isEditing ? (
-                <textarea
-                  value={editData.bio || ''}
-                  onChange={(e) => setEditData({...editData, bio: e.target.value})}
-                  rows="3"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                />
-              ) : (
-                <p className="text-gray-600">{profile.bio || 'No bio provided'}</p>
-              )}
+              <p className="text-gray-600 bg-gray-50 p-3 rounded-lg">{profile.bio || 'No bio provided'}</p>
             </div>
           </div>
         </div>
 
         {/* Skills & CV */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Skills & CV</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[#F5831F]" />
+            Skills & CV
+          </h3>
           
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Skills</label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(isEditing ? editData.skills : profile.skills)?.map((skill, index) => (
-                <span key={index} className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+            <div className="flex flex-wrap gap-2">
+              {profile.skills?.map((skill, index) => (
+                <span key={index} className="bg-[#F5831F]/10 text-[#F5831F] px-3 py-1 rounded-full text-sm font-medium">
                   {skill}
-                  {isEditing && (
-                    <button
-                      onClick={() => handleRemoveSkill(skill)}
-                      className="text-blue-400 hover:text-red-500 transition"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </span>
               ))}
             </div>
-            {isEditing && (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  placeholder="Add a skill..."
-                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-900"
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
-                />
-                <button
-                  onClick={handleAddSkill}
-                  className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition"
-                >
-                  + Add
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -393,13 +283,13 @@ const Profile = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-bold text-gray-900">Recent Applications</h3>
-            <Link to="/applications" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/applications" className="text-sm text-[#F5831F] hover:text-[#e0731a] font-medium hover:underline">
               View All →
             </Link>
           </div>
           {profile.applications?.length > 0 ? (
             <div className="space-y-3">
-              {profile.applications.map((app) => (
+              {profile.applications.slice(0, 5).map((app) => (
                 <div key={app.id} className="flex flex-wrap items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                   <div>
                     <p className="font-medium text-gray-900">{app.title}</p>
@@ -419,6 +309,241 @@ const Profile = () => {
           )}
         </div>
       </div>
+
+      {/* ============================================================
+          EDIT PROFILE MODAL
+      ============================================================ */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 animate-slideUp">
+            
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#F5831F]/10 rounded-lg flex items-center justify-center">
+                  <Edit2 className="w-5 h-5 text-[#F5831F]" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
+                  <p className="text-sm text-gray-500">Update your personal information</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCancel}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-6 space-y-5">
+              {/* Name & Email */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-gray-400" />
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.fullName || ''}
+                    onChange={(e) => setEditData({...editData, fullName: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editData.email || ''}
+                    onChange={(e) => setEditData({...editData, email: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    placeholder="Enter your email"
+                  />
+                </div>
+              </div>
+
+              {/* Phone & Location */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editData.phone || ''}
+                    onChange={(e) => setEditData({...editData, phone: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.location || ''}
+                    onChange={(e) => setEditData({...editData, location: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    placeholder="Enter your location"
+                  />
+                </div>
+              </div>
+
+              {/* University & Course */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <GraduationCap className="w-4 h-4 text-gray-400" />
+                    University
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.university || ''}
+                    onChange={(e) => setEditData({...editData, university: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    placeholder="Enter your university"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-gray-400" />
+                    Course
+                  </label>
+                  <input
+                    type="text"
+                    value={editData.course || ''}
+                    onChange={(e) => setEditData({...editData, course: e.target.value})}
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    placeholder="Enter your course"
+                  />
+                </div>
+              </div>
+
+              {/* Year of Study */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  Year of Study
+                </label>
+                <select
+                  value={editData.yearOfStudy || '1st Year'}
+                  onChange={(e) => setEditData({...editData, yearOfStudy: e.target.value})}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition appearance-none"
+                >
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                  <option value="Graduate">Graduate</option>
+                </select>
+              </div>
+
+              {/* Bio */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-gray-400" />
+                  Bio
+                </label>
+                <textarea
+                  value={editData.bio || ''}
+                  onChange={(e) => setEditData({...editData, bio: e.target.value})}
+                  rows="3"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition resize-none"
+                  placeholder="Tell us about yourself..."
+                />
+              </div>
+
+              {/* Skills */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
+                  <Plus className="w-4 h-4 text-gray-400" />
+                  Skills
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {editData.skills?.map((skill, index) => (
+                    <span key={index} className="inline-flex items-center gap-1 bg-[#F5831F]/10 text-[#F5831F] px-3 py-1 rounded-full text-sm font-medium">
+                      {skill}
+                      <button
+                        onClick={() => handleRemoveSkill(skill)}
+                        className="text-gray-400 hover:text-red-500 transition ml-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="Add a skill..."
+                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition"
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddSkill()}
+                  />
+                  <button
+                    onClick={handleAddSkill}
+                    className="px-4 py-2.5 bg-[#F5831F] text-white rounded-lg hover:bg-[#e0731a] transition flex items-center gap-1"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={handleCancel}
+                className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-6 py-2.5 bg-[#F5831F] text-white rounded-lg hover:bg-[#e0731a] transition font-medium flex items-center gap-2 shadow-md hover:shadow-lg"
+              >
+                <Save className="w-4 h-4" />
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { 
+            opacity: 0;
+            transform: translateY(20px) scale(0.98);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };

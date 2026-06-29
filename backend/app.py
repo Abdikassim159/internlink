@@ -8,6 +8,7 @@ from datetime import timedelta
 import os
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 def create_app():
@@ -45,6 +46,7 @@ def create_app():
     from routes.profile import profile_bp
     from routes.mpesa import mpesa_bp
     from routes.saved import saved_bp
+    from routes.messages import messages_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(opportunities_bp, url_prefix='/api')
@@ -53,7 +55,8 @@ def create_app():
     app.register_blueprint(profile_bp, url_prefix='/api')
     app.register_blueprint(mpesa_bp, url_prefix='/api')
     app.register_blueprint(saved_bp, url_prefix='/api')
-    
+    app.register_blueprint(messages_bp, url_prefix='/api')
+
     # Test route
     @app.route('/api/health', methods=['GET'])
     def health_check():
