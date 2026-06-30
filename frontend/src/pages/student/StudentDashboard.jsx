@@ -19,6 +19,7 @@ import {
   Award,
   Clock,
   ChevronRight,
+  ChevronDown,
   Plus,
   Search,
   Star,
@@ -35,10 +36,17 @@ import {
   MapPin,
   BookOpen,
   Trash2,
-  Heart
+  HelpCircle,
+  Folder,
 } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
+
+// ── Brand palette — shared across the whole app ──
+const BRAND      = '#F5831F';
+const DARK_BG    = '#1C1209';
+const SIDEBAR_BG = '#FBF3E7';
+const TEXT_DIM   = '#9A8568';
 
 const StudentDashboard = () => {
   const [user, setUser] = useState(null);
@@ -46,12 +54,12 @@ const StudentDashboard = () => {
   const [opportunities, setOpportunities] = useState([]);
   const [filteredOpportunities, setFilteredOpportunities] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
-  
+
   // ===== SAVE STATE =====
   const [savedOpportunities, setSavedOpportunities] = useState([]);
   const [savedIds, setSavedIds] = useState(new Set());
   const [savingId, setSavingId] = useState(null);
-  
+
   // ===== PROFILE STATE =====
   const [profileData, setProfileData] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -60,21 +68,21 @@ const StudentDashboard = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMessage, setProfileMessage] = useState('');
   const [profileError, setProfileError] = useState('');
-  
+
   // ===== MESSAGES STATE =====
   const [messages, setMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isMessageDetailOpen, setIsMessageDetailOpen] = useState(false);
-  
+
   // ===== NOTIFICATION SETTINGS =====
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,
     messagePreview: true
   });
-  
+
   const [stats, setStats] = useState({
     applied: 0,
     shortlisted: 0,
@@ -90,13 +98,15 @@ const StudentDashboard = () => {
   const [browseLocation, setBrowseLocation] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
+  const [topSearchTerm, setTopSearchTerm] = useState('');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   // ===== GET AUTH HEADERS =====
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');
     return {
-      headers: { 
+      headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
@@ -107,7 +117,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     const userData = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    
+
     if (!token || !userData) {
       navigate('/student-login');
       return;
@@ -116,7 +126,7 @@ const StudentDashboard = () => {
     try {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      
+
       // Load notification settings
       const savedSettings = localStorage.getItem('notificationSettings');
       if (savedSettings) {
@@ -126,7 +136,7 @@ const StudentDashboard = () => {
           console.error('Error loading notification settings:', e);
         }
       }
-      
+
       loadAllData();
     } catch (e) {
       console.error('Error parsing user data:', e);
@@ -139,9 +149,9 @@ const StudentDashboard = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
+
       console.log('🔵 Loading dashboard data...');
-      
+
       // 1. Fetch opportunities
       try {
         const oppsRes = await axios.get(`${API_URL}/opportunities`);
@@ -160,13 +170,13 @@ const StudentDashboard = () => {
         setOpportunities([]);
         setFilteredOpportunities([]);
       }
-      
+
       // 2. Fetch applications
       try {
         const appRes = await axios.get(`${API_URL}/applications/my`, getAuthHeaders());
         const apps = appRes.data.applications || [];
         setApplications(apps);
-        
+
         setStats({
           applied: apps.length,
           shortlisted: apps.filter(a => a.status === 'shortlisted').length,
@@ -177,13 +187,13 @@ const StudentDashboard = () => {
       } catch (err) {
         console.error('Error fetching applications:', err);
       }
-      
+
       // 3. Fetch saved opportunities
       try {
         const savedRes = await axios.get(`${API_URL}/saved`, getAuthHeaders());
         const saved = savedRes.data.saved || [];
         setSavedOpportunities(saved);
-        
+
         const ids = new Set();
         saved.forEach(item => {
           if (item && item.id) {
@@ -194,13 +204,13 @@ const StudentDashboard = () => {
       } catch (err) {
         console.error('Error fetching saved:', err);
       }
-      
+
       // 4. Fetch profile
       try {
         const profileRes = await axios.get(`${API_URL}/profile`, getAuthHeaders());
         setProfileData(profileRes.data);
-        setUser(prev => ({ 
-          ...prev, 
+        setUser(prev => ({
+          ...prev,
           ...profileRes.data,
           full_name: profileRes.data.fullName || prev?.full_name,
           phone: profileRes.data.phone,
@@ -214,7 +224,7 @@ const StudentDashboard = () => {
       } catch (err) {
         console.error('Error fetching profile:', err);
       }
-      
+
       // 5. Fetch messages
       try {
         const messagesRes = await axios.get(`${API_URL}/messages`, getAuthHeaders());
@@ -223,7 +233,7 @@ const StudentDashboard = () => {
       } catch (err) {
         console.error('Error fetching messages:', err);
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error loading data:', err);
@@ -236,12 +246,12 @@ const StudentDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
-      
+
       const response = await axios.get(`${API_URL}/saved`, getAuthHeaders());
-      
+
       const saved = response.data.saved || [];
       setSavedOpportunities(saved);
-      
+
       const ids = new Set();
       saved.forEach(item => {
         if (item && item.id) {
@@ -249,7 +259,7 @@ const StudentDashboard = () => {
         }
       });
       setSavedIds(ids);
-      
+
       return saved;
     } catch (err) {
       console.error('Error fetching saved:', err);
@@ -262,29 +272,29 @@ const StudentDashboard = () => {
     try {
       setSavingId(opportunityId);
       const token = localStorage.getItem('token');
-      
+
       if (!token) {
         alert('Please login first');
         return;
       }
-      
+
       const checkResponse = await axios.get(`${API_URL}/saved/check/${opportunityId}`, getAuthHeaders());
-      
+
       if (checkResponse.data.saved === true) {
         await axios.delete(`${API_URL}/saved/${opportunityId}`, getAuthHeaders());
-        
+
         setSavedIds(prev => {
           const newSet = new Set(prev);
           newSet.delete(opportunityId);
           return newSet;
         });
         setSavedOpportunities(prev => prev.filter(o => o.id !== opportunityId));
-        
+
       } else {
         await axios.post(`${API_URL}/saved/${opportunityId}`, {}, getAuthHeaders());
-        
+
         setSavedIds(prev => new Set(prev).add(opportunityId));
-        
+
         const opp = opportunities.find(o => o.id === opportunityId);
         if (opp) {
           setSavedOpportunities(prev => {
@@ -308,7 +318,7 @@ const StudentDashboard = () => {
       setLoadingMessages(true);
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/messages`, getAuthHeaders());
-      
+
       setMessages(response.data.messages || []);
       setUnreadCount(response.data.unread_count || 0);
       setLoadingMessages(false);
@@ -323,7 +333,7 @@ const StudentDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/messages/${messageId}`, getAuthHeaders());
-      
+
       setSelectedMessage(response.data);
       setIsMessageDetailOpen(true);
       fetchMessages();
@@ -335,11 +345,11 @@ const StudentDashboard = () => {
   // ===== HANDLE DELETE MESSAGE =====
   const handleDeleteMessage = async (messageId) => {
     if (!confirm('Are you sure you want to delete this message?')) return;
-    
+
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${API_URL}/messages/${messageId}`, getAuthHeaders());
-      
+
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
       if (selectedMessage?.id === messageId) {
         setIsMessageDetailOpen(false);
@@ -356,11 +366,11 @@ const StudentDashboard = () => {
     try {
       const token = localStorage.getItem('token');
       const unreadMessages = messages.filter(msg => !msg.is_read);
-      
+
       for (const msg of unreadMessages) {
         await axios.put(`${API_URL}/messages/${msg.id}/read`, {}, getAuthHeaders());
       }
-      
+
       setMessages(prev => prev.map(msg => ({ ...msg, is_read: true })));
       setUnreadCount(0);
     } catch (err) {
@@ -399,8 +409,8 @@ const StudentDashboard = () => {
     try {
       setSavingProfile(true);
       const token = localStorage.getItem('token');
-      
-      await axios.put(`${API_URL}/profile`, 
+
+      await axios.put(`${API_URL}/profile`,
         {
           fullName: editData.fullName,
           email: editData.email,
@@ -414,17 +424,17 @@ const StudentDashboard = () => {
         },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      
+
       setProfileData(editData);
-      setUser(prev => ({ 
-        ...prev, 
+      setUser(prev => ({
+        ...prev,
         ...editData,
         full_name: editData.fullName
       }));
-      
+
       setSavingProfile(false);
       handleCloseEditModal();
-      setProfileMessage('✅ Profile updated successfully!');
+      setProfileMessage('Profile updated successfully!');
       setTimeout(() => setProfileMessage(''), 3000);
     } catch (err) {
       setSavingProfile(false);
@@ -461,7 +471,7 @@ const StudentDashboard = () => {
   // ===== HANDLE TAB CLICK =====
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
-    
+
     if (tabId === 'browse') {
       setFilteredOpportunities(opportunities);
     }
@@ -480,12 +490,12 @@ const StudentDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
-      
+
       const appRes = await axios.get(`${API_URL}/applications/my`, getAuthHeaders());
-      
+
       const apps = appRes.data.applications || [];
       setApplications(apps);
-      
+
       setStats({
         applied: apps.length,
         shortlisted: apps.filter(a => a.status === 'shortlisted').length,
@@ -509,24 +519,24 @@ const StudentDashboard = () => {
 
   useEffect(() => {
     let filtered = [...opportunities];
-    
+
     if (browseSearchTerm) {
-      filtered = filtered.filter(opp => 
+      filtered = filtered.filter(opp =>
         opp.title?.toLowerCase().includes(browseSearchTerm.toLowerCase()) ||
         opp.company_name?.toLowerCase().includes(browseSearchTerm.toLowerCase())
       );
     }
-    
+
     if (browseType !== 'All Types') {
       filtered = filtered.filter(opp => opp.type === browseType);
     }
-    
+
     if (browseLocation) {
-      filtered = filtered.filter(opp => 
+      filtered = filtered.filter(opp =>
         opp.location?.toLowerCase().includes(browseLocation.toLowerCase())
       );
     }
-    
+
     setFilteredOpportunities(filtered);
   }, [browseSearchTerm, browseType, browseLocation, opportunities]);
 
@@ -565,22 +575,24 @@ const StudentDashboard = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'applications', label: 'Applications', icon: FileText },
+    { id: 'applications', label: 'My Applications', icon: FileText },
     { id: 'saved', label: 'Saved Opportunities', icon: Bookmark },
     { id: 'messages', label: 'Messages', icon: MessageSquare },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'resume', label: 'Resume/CV', icon: File },
+    { id: 'resume', label: 'Resume / CV', icon: File },
+    { id: 'documents', label: 'Documents', icon: Folder },
     { id: 'career', label: 'Career Resources', icon: GraduationCap },
     { id: 'events', label: 'Events & Webinars', icon: Calendar },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle },
   ];
 
   const statusColors = {
-    'pending': 'bg-yellow-100 text-yellow-700',
-    'shortlisted': 'bg-blue-100 text-blue-700',
-    'interview': 'bg-green-100 text-green-700',
-    'accepted': 'bg-purple-100 text-purple-700',
-    'rejected': 'bg-red-100 text-red-700'
+    'pending': 'bg-amber-50 text-amber-700',
+    'shortlisted': 'bg-emerald-50 text-emerald-700',
+    'interview': 'bg-violet-50 text-violet-700',
+    'accepted': 'bg-green-50 text-green-700',
+    'rejected': 'bg-red-50 text-red-700'
   };
 
   const statusIcons = {
@@ -606,142 +618,287 @@ const StudentDashboard = () => {
   };
 
   const getTypeColor = (type) => {
-    if (type === 'Internship') return 'bg-blue-100 text-blue-700';
-    if (type === 'Attachment') return 'bg-green-100 text-green-700';
-    if (type === 'Graduate Trainee') return 'bg-purple-100 text-purple-700';
+    if (type === 'Internship') return 'bg-blue-50 text-blue-700';
+    if (type === 'Attachment') return 'bg-emerald-50 text-emerald-700';
+    if (type === 'Graduate Trainee') return 'bg-violet-50 text-violet-700';
     return 'bg-gray-100 text-gray-600';
   };
 
+  // ===== FIXED: dashboardStats - Saved shows correct count =====
   const dashboardStats = [
-    { label: 'Applications', value: stats.applied, icon: FileText, color: '#F5831F' },
-    { label: 'Shortlisted', value: stats.shortlisted, icon: Users, color: '#6366F1' },
-    { label: 'Interviews', value: stats.interview, icon: Calendar, color: '#10B981' },
-    { label: 'Offers', value: stats.accepted, icon: Award, color: '#8B5E3C' },
+    { label: 'Applications', value: stats.applied, sub: stats.applied > 0 ? `${stats.applied} total` : 'No applications yet', subColor: TEXT_DIM, Icon: Briefcase },
+    { label: 'Shortlisted',  value: stats.shortlisted, sub: stats.shortlisted > 0 ? 'Great progress' : 'Keep applying', subColor: '#16A34A', Icon: Bookmark },
+    { label: 'Interviews',   value: stats.interview, sub: stats.interview > 0 ? 'This week' : 'None scheduled', subColor: '#16A34A', Icon: Users },
+    { label: 'Saved',        value: savedOpportunities.length, sub: savedOpportunities.length > 0 ? `${savedOpportunities.length} saved` : 'Save opportunities', subColor: BRAND, Icon: Star },
   ];
+
+  // Profile completion percentage
+  const profileFields = [user?.phone, user?.location, user?.university, user?.course, user?.bio, user?.skills?.length > 0];
+  const filledCount = profileFields.filter(Boolean).length;
+  const profileCompletion = Math.round(((filledCount + 1) / (profileFields.length + 1)) * 100);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F5831F]"></div>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: SIDEBAR_BG }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-t-transparent" style={{ borderColor: `${BRAND} transparent ${BRAND} ${BRAND}` }}></div>
+          <p style={{ color: TEXT_DIM, fontSize: 13 }}>Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
 
-  const isDarkBg = isDarkMode ? 'bg-gray-900' : 'bg-gray-50';
+  const isDarkBg = isDarkMode ? 'bg-gray-900' : '';
 
   return (
-    <div className={`min-h-screen ${isDarkBg} flex`}>
+    <div
+      className={`min-h-screen flex ${isDarkBg}`}
+      style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif", background: isDarkMode ? undefined : '#FAFAF8' }}
+    >
       {/* ===== SIDEBAR ===== */}
-      <aside 
-        className={`bg-[#1C1209] text-white w-64 flex-shrink-0 h-screen sticky top-0 overflow-y-auto transition-all duration-300`}
+      <aside
+        className="w-64 flex-shrink-0 h-screen sticky top-0 flex flex-col"
+        style={{ background: isDarkMode ? '#15110C' : SIDEBAR_BG, borderRight: `1px solid ${isDarkMode ? '#2A2218' : '#F0E4D0'}`, overflow: 'hidden' }}
       >
-        <div className="p-5 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#F5831F] rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">in</span>
+        {/* Logo */}
+        <div className="px-6 pt-6 pb-5 flex-shrink-0">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div
+              className="flex items-center justify-center rounded-xl flex-shrink-0"
+              style={{ width: 38, height: 38, background: DARK_BG, boxShadow: '0 0 0 1.5px rgba(245,131,31,0.3)' }}
+            >
+              <img
+                src="/logo.jpeg"
+                alt="Intern Link"
+                className="w-full h-full object-contain rounded-xl"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;">🎓</div>`;
+                }}
+              />
             </div>
-            <span className="font-semibold text-lg">Intern<span className="text-[#F5831F]">Link</span></span>
-          </div>
-        </div>
-
-        <div className="px-5 py-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#F5831F] flex items-center justify-center text-white font-bold">
-              {user?.full_name?.charAt(0) || user?.fullName?.charAt(0) || 'U'}
-            </div>
-            <div>
-              <p className="font-semibold text-sm">Welcome back,</p>
-              <p className="font-bold text-sm text-[#F5831F]">{user?.full_name?.split(' ')[0] || user?.fullName?.split(' ')[0] || 'User'}</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="p-3 space-y-1">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabClick(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 ${
-                  isActive 
-                    ? 'bg-[#F5831F] text-white font-medium' 
-                    : 'text-gray-400 hover:bg-white/10 hover:text-white'
-                }`}
+            <div className="leading-tight">
+              <p
+                className="font-bold text-[17px]"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif", color: isDarkMode ? '#fff' : '#1A1005' }}
               >
-                <Icon className="w-5 h-5" />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.id === 'messages' && unreadCount > 0 && (
-                  <span className="ml-auto bg-[#F5831F] text-white text-xs px-2 py-0.5 rounded-full">
-                    {unreadCount}
-                  </span>
-                )}
-                {item.id === 'notifications' && (
-                  <span className="ml-auto bg-[#F5831F] text-white text-xs px-2 py-0.5 rounded-full">3</span>
-                )}
-              </button>
-            );
-          })}
+                Intern <span style={{ color: BRAND }}>Link</span>
+              </p>
+              <p style={{ fontSize: 9.5, color: TEXT_DIM, letterSpacing: '0.06em' }}>
+                Learn. Experience. Succeed.
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        {/* Navigation */}
+        <nav className="px-3 flex-1 overflow-y-auto pb-3 min-h-0">
+          <div className="space-y-0.5">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabClick(item.id)}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all"
+                  style={{
+                    background: isActive ? (isDarkMode ? 'rgba(245,131,31,0.15)' : '#F0D8B0') : 'transparent',
+                    color: isActive ? (isDarkMode ? BRAND : '#5C3D1A') : (isDarkMode ? '#A89878' : '#7A6850'),
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = isDarkMode ? 'rgba(255,255,255,0.04)' : '#F5EBDA'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Icon style={{ width: 17, height: 17, flexShrink: 0 }} />
+                  <span className="flex-1 text-left">{item.label}</span>
+                  {item.id === 'messages' && unreadCount > 0 && (
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: BRAND, color: '#fff', minWidth: 18, textAlign: 'center' }}
+                    >
+                      {unreadCount}
+                    </span>
+                  )}
+                  {item.id === 'notifications' && (
+                    <span
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                      style={{ background: BRAND, color: '#fff', minWidth: 18, textAlign: 'center' }}
+                    >
+                      5
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
-        <div className="p-3 border-t border-white/10 mt-auto">
+        {/* Complete Profile widget */}
+        <div className="px-4 pb-3 flex-shrink-0">
+          <div
+            className="rounded-2xl p-4 text-center"
+            style={{ background: isDarkMode ? '#1E1810' : '#FFFFFF', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0E4D0'}` }}
+          >
+            <p className="font-semibold mb-0.5" style={{ fontSize: 12.5, color: isDarkMode ? '#fff' : '#1A1005' }}>
+              Complete Your Profile
+            </p>
+            <p className="mb-3" style={{ fontSize: 10.5, color: TEXT_DIM, lineHeight: 1.4 }}>
+              Increase your chances by 80%
+            </p>
+
+            <div className="relative mx-auto mb-3" style={{ width: 76, height: 76 }}>
+              <svg viewBox="0 0 80 80" width="76" height="76">
+                <circle cx="40" cy="40" r="34" fill="none" stroke={isDarkMode ? '#2A2218' : '#F0E4D0'} strokeWidth="6" />
+                <circle
+                  cx="40" cy="40" r="34" fill="none"
+                  stroke={BRAND} strokeWidth="6" strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 34}`}
+                  strokeDashoffset={`${2 * Math.PI * 34 * (1 - profileCompletion / 100)}`}
+                  transform="rotate(-90 40 40)"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="font-bold" style={{ fontSize: 16, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                  {profileCompletion}%
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleOpenEditModal}
+              className="w-full flex items-center justify-center gap-1.5 font-semibold text-white transition-all"
+              style={{ background: '#3D2A18', fontSize: 12, padding: '9px 0', borderRadius: 10 }}
+              onMouseEnter={e => (e.currentTarget.style.background = BRAND)}
+              onMouseLeave={e => (e.currentTarget.style.background = '#3D2A18')}
+            >
+              Complete Now
+              <ChevronRight style={{ width: 13, height: 13 }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <div className="px-4 pb-5 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/10 hover:text-white transition-all"
+            className="w-full flex items-center justify-center gap-2 font-semibold transition-all"
+            style={{
+              background: isDarkMode ? 'rgba(239,68,68,0.1)' : '#FBEAE5',
+              color: '#C0392B',
+              fontSize: 13,
+              padding: '11px 0',
+              borderRadius: 12,
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#F8D7D0')}
+            onMouseLeave={e => (e.currentTarget.style.background = isDarkMode ? 'rgba(239,68,68,0.1)' : '#FBEAE5')}
           >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
+            <LogOut style={{ width: 15, height: 15 }} />
+            Logout
           </button>
         </div>
       </aside>
 
       {/* ===== MAIN CONTENT ===== */}
-      <div className="flex-1 min-h-screen">
-        {/* ===== TOP BAR ===== */}
-        <header className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4 sticky top-0 z-10`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {activeTab === 'dashboard' ? 'Dashboard' : 
-                 activeTab === 'profile' ? 'My Profile' :
-                 activeTab === 'applications' ? 'My Applications' :
-                 activeTab === 'saved' ? 'Saved Opportunities' :
-                 activeTab === 'messages' ? 'Messages' :
-                 activeTab === 'notifications' ? 'Notifications' :
-                 activeTab === 'resume' ? 'Resume/CV' :
-                 activeTab === 'career' ? 'Career Resources' :
-                 activeTab === 'events' ? 'Events & Webinars' :
-                 activeTab === 'settings' ? 'Settings' : 'Dashboard'}
-              </h1>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {activeTab === 'dashboard' ? 'Discover and apply to the best internships and attachments.' :
-                 activeTab === 'profile' ? 'Manage your personal information' :
-                 activeTab === 'applications' ? `${applications.length} application(s)` :
-                 activeTab === 'saved' ? `${savedOpportunities.length} saved opportunity(ies)` :
-                 activeTab === 'messages' ? `${unreadCount} unread message(s)` :
-                 `Welcome back, ${user?.full_name?.split(' ')[0] || 'User'} 👋`}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={toggleDarkMode}
-                className={`p-2 rounded-lg transition ${isDarkMode ? 'bg-gray-700 text-yellow-400' : 'bg-gray-100 text-gray-600'}`}
+      <div className="flex-1 min-h-screen min-w-0">
+        {/* Top bar */}
+        <header
+          className="sticky top-0 z-10 px-6 py-4 flex items-center justify-between gap-6"
+          style={{ background: isDarkMode ? '#1A1611' : '#FFFFFF', borderBottom: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}
+        >
+          <div className="relative flex-1" style={{ maxWidth: 420 }}>
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ width: 16, height: 16, color: '#9CA3AF' }} />
+            <input
+              type="text"
+              value={topSearchTerm}
+              onChange={(e) => setTopSearchTerm(e.target.value)}
+              placeholder="Search opportunities, companies..."
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl outline-none transition-all"
+              style={{
+                fontSize: 13, background: isDarkMode ? '#242019' : '#F7F5F1',
+                color: isDarkMode ? '#fff' : '#111', border: `1px solid ${isDarkMode ? '#2A2218' : 'transparent'}`,
+              }}
+              onFocus={e => { e.target.style.borderColor = BRAND; e.target.style.background = isDarkMode ? '#242019' : '#fff'; e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.10)`; }}
+              onBlur={e => { e.target.style.borderColor = isDarkMode ? '#2A2218' : 'transparent'; e.target.style.background = isDarkMode ? '#242019' : '#F7F5F1'; e.target.style.boxShadow = 'none'; }}
+            />
+          </div>
+
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <button
+              onClick={() => handleTabClick('notifications')}
+              className="relative p-2 rounded-xl transition-colors"
+              style={{ background: isDarkMode ? '#242019' : '#F7F5F1' }}
+            >
+              <Bell style={{ width: 18, height: 18, color: isDarkMode ? '#D1D5DB' : '#4B5563' }} />
+              <span
+                className="absolute -top-1 -right-1 flex items-center justify-center font-bold text-white rounded-full"
+                style={{ width: 16, height: 16, fontSize: 9, background: BRAND }}
               >
-                {isDarkMode ? '☀️' : '🌙'}
+                5
+              </span>
+            </button>
+
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(v => !v)}
+                className="flex items-center gap-2.5"
+              >
+                <div
+                  className="rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 overflow-hidden"
+                  style={{ width: 38, height: 38, background: `linear-gradient(145deg, ${BRAND}, #D4690F)`, fontSize: 14 }}
+                >
+                  {(user?.full_name || user?.fullName || 'U').charAt(0)}
+                </div>
+                <div className="text-left hidden sm:block">
+                  <p className="font-semibold leading-tight" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                    {user?.full_name || user?.fullName || 'Student'}
+                  </p>
+                  <p style={{ fontSize: 11, color: TEXT_DIM }}>
+                    {user?.course || 'Student'}
+                  </p>
+                </div>
+                <ChevronDown style={{ width: 14, height: 14, color: TEXT_DIM }} />
               </button>
-              <button className={`p-2 rounded-lg hover:bg-gray-100 relative ${isDarkMode ? 'hover:bg-gray-700' : ''}`}>
-                <Bell className={`w-5 h-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-[#F5831F] rounded-full"></span>
-              </button>
-              <div className="w-8 h-8 rounded-full bg-[#F5831F] flex items-center justify-center text-white font-bold">
-                {user?.full_name?.charAt(0) || user?.fullName?.charAt(0) || 'U'}
-              </div>
+
+              {profileMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-52 rounded-xl py-1.5 z-50"
+                  style={{ background: '#fff', border: '1px solid #F0EEE9', boxShadow: '0 12px 32px rgba(0,0,0,0.10)' }}
+                >
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); handleTabClick('profile'); }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-left transition-colors"
+                    style={{ fontSize: 13, color: '#374151' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#F7F5F1')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <User style={{ width: 15, height: 15 }} /> My Profile
+                  </button>
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); handleTabClick('settings'); }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-left transition-colors"
+                    style={{ fontSize: 13, color: '#374151' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#F7F5F1')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <Settings style={{ width: 15, height: 15 }} /> Settings
+                  </button>
+                  <div style={{ borderTop: '1px solid #F0EEE9' }} className="my-1" />
+                  <button
+                    onClick={() => { setProfileMenuOpen(false); handleLogout(); }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-left transition-colors"
+                    style={{ fontSize: 13, color: '#C0392B' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#FBEAE5')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <LogOut style={{ width: 15, height: 15 }} /> Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
-        {/* ===== CONTENT ===== */}
+        {/* Page content */}
         <main className="p-6">
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'profile' && renderProfile()}
@@ -751,21 +908,22 @@ const StudentDashboard = () => {
           {activeTab === 'messages' && renderMessages()}
           {activeTab === 'notifications' && renderNotifications()}
           {activeTab === 'resume' && renderResume()}
+          {activeTab === 'documents' && renderResume()}
           {activeTab === 'career' && renderCareer()}
           {activeTab === 'events' && renderEvents()}
           {activeTab === 'settings' && renderSettings()}
+          {activeTab === 'help' && renderCareer()}
         </main>
       </div>
 
-      {/* ===== EDIT PROFILE MODAL ===== */}
+      {/* Edit Profile Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            
             <div className="sticky top-0 bg-white z-10 border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-[#F5831F]/10 rounded-xl flex items-center justify-center">
-                  <Edit2 className="w-5 h-5 text-[#F5831F]" />
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,131,31,0.10)' }}>
+                  <Edit2 className="w-5 h-5" style={{ color: BRAND }} />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Edit Profile</h2>
@@ -787,13 +945,13 @@ const StudentDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <User className="w-4 h-4 text-gray-400" /> Full Name
                   </label>
-                  <input type="text" value={editData.fullName || ''} onChange={(e) => setEditData({...editData, fullName: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" placeholder="Enter your full name" />
+                  <input type="text" value={editData.fullName || ''} onChange={(e) => setEditData({...editData, fullName: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition bg-gray-50 focus:bg-white" style={{ '--tw-ring-color': BRAND }} onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Enter your full name" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <Mail className="w-4 h-4 text-gray-400" /> Email
                   </label>
-                  <input type="email" value={editData.email || ''} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" placeholder="Enter your email" />
+                  <input type="email" value={editData.email || ''} onChange={(e) => setEditData({...editData, email: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Enter your email" />
                 </div>
               </div>
 
@@ -802,13 +960,13 @@ const StudentDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <Phone className="w-4 h-4 text-gray-400" /> Phone
                   </label>
-                  <input type="tel" value={editData.phone || ''} onChange={(e) => setEditData({...editData, phone: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" placeholder="Enter your phone number" />
+                  <input type="tel" value={editData.phone || ''} onChange={(e) => setEditData({...editData, phone: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Enter your phone number" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-gray-400" /> Location
                   </label>
-                  <input type="text" value={editData.location || ''} onChange={(e) => setEditData({...editData, location: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" placeholder="Enter your location" />
+                  <input type="text" value={editData.location || ''} onChange={(e) => setEditData({...editData, location: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Enter your location" />
                 </div>
               </div>
 
@@ -817,13 +975,13 @@ const StudentDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <GraduationCap className="w-4 h-4 text-gray-400" /> University
                   </label>
-                  <input type="text" value={editData.university || ''} onChange={(e) => setEditData({...editData, university: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" placeholder="Enter your university" />
+                  <input type="text" value={editData.university || ''} onChange={(e) => setEditData({...editData, university: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Enter your university" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                     <BookOpen className="w-4 h-4 text-gray-400" /> Course
                   </label>
-                  <input type="text" value={editData.course || ''} onChange={(e) => setEditData({...editData, course: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" placeholder="Enter your course" />
+                  <input type="text" value={editData.course || ''} onChange={(e) => setEditData({...editData, course: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Enter your course" />
                 </div>
               </div>
 
@@ -831,7 +989,7 @@ const StudentDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-gray-400" /> Year of Study
                 </label>
-                <select value={editData.yearOfStudy || '1st Year'} onChange={(e) => setEditData({...editData, yearOfStudy: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white appearance-none">
+                <select value={editData.yearOfStudy || '1st Year'} onChange={(e) => setEditData({...editData, yearOfStudy: e.target.value})} className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white appearance-none" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'}>
                   <option value="1st Year">1st Year</option>
                   <option value="2nd Year">2nd Year</option>
                   <option value="3rd Year">3rd Year</option>
@@ -844,7 +1002,7 @@ const StudentDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5 flex items-center gap-1.5">
                   <FileText className="w-4 h-4 text-gray-400" /> Bio
                 </label>
-                <textarea value={editData.bio || ''} onChange={(e) => setEditData({...editData, bio: e.target.value})} rows="3" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white resize-none" placeholder="Tell us about yourself..." />
+                <textarea value={editData.bio || ''} onChange={(e) => setEditData({...editData, bio: e.target.value})} rows="3" className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white resize-none" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} placeholder="Tell us about yourself..." />
               </div>
 
               <div>
@@ -853,7 +1011,7 @@ const StudentDashboard = () => {
                 </label>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {editData.skills?.map((skill, index) => (
-                    <span key={index} className="inline-flex items-center gap-1.5 bg-[#F5831F]/10 text-[#F5831F] px-3 py-1.5 rounded-full text-sm font-medium border border-[#F5831F]/20">
+                    <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium" style={{ background: 'rgba(245,131,31,0.10)', color: BRAND, border: '1px solid rgba(245,131,31,0.2)' }}>
                       {skill}
                       <button onClick={() => handleRemoveSkill(skill)} className="text-gray-400 hover:text-red-500 transition ml-1" type="button">
                         <Trash2 className="w-3 h-3" />
@@ -862,8 +1020,8 @@ const StudentDashboard = () => {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input type="text" value={newSkill} onChange={(e) => setNewSkill(e.target.value)} onKeyPress={handleKeyPress} placeholder="Add a skill..." className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F5831F] focus:border-transparent transition bg-gray-50 focus:bg-white" />
-                  <button onClick={handleAddSkill} className="px-4 py-2.5 bg-[#F5831F] text-white rounded-xl hover:bg-[#e0731a] transition flex items-center gap-1 font-medium" type="button">
+                  <input type="text" value={newSkill} onChange={(e) => setNewSkill(e.target.value)} onKeyPress={handleKeyPress} placeholder="Add a skill..." className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none transition bg-gray-50 focus:bg-white" onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.15)`} onBlur={e => e.target.style.boxShadow = 'none'} />
+                  <button onClick={handleAddSkill} className="px-4 py-2.5 text-white rounded-xl transition flex items-center gap-1 font-medium" style={{ background: BRAND }} onMouseEnter={e => e.currentTarget.style.background = '#D4690F'} onMouseLeave={e => e.currentTarget.style.background = BRAND} type="button">
                     <Plus className="w-4 h-4" /> Add
                   </button>
                 </div>
@@ -872,7 +1030,7 @@ const StudentDashboard = () => {
 
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end gap-3 rounded-b-2xl">
               <button onClick={handleCloseEditModal} className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition font-medium" disabled={savingProfile}>Cancel</button>
-              <button onClick={handleSaveProfile} disabled={savingProfile} className={`px-6 py-2.5 bg-[#F5831F] text-white rounded-xl hover:bg-[#e0731a] transition font-medium flex items-center gap-2 shadow-md hover:shadow-lg ${savingProfile ? 'opacity-70 cursor-not-allowed' : ''}`}>
+              <button onClick={handleSaveProfile} disabled={savingProfile} className="px-6 py-2.5 text-white rounded-xl transition font-medium flex items-center gap-2 shadow-md hover:shadow-lg" style={{ background: savingProfile ? '#C49050' : '#3D2A18' }} onMouseEnter={e => { if (!savingProfile) e.currentTarget.style.background = BRAND; }} onMouseLeave={e => { if (!savingProfile) e.currentTarget.style.background = '#3D2A18'; }}>
                 {savingProfile ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> Saving...
@@ -888,15 +1046,14 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* ===== MESSAGE DETAIL MODAL ===== */}
+      {/* Message Detail Modal */}
       {isMessageDetailOpen && selectedMessage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            
             <div className="sticky top-0 bg-white z-10 border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#F5831F]/10 rounded-xl flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-[#F5831F]" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,131,31,0.10)' }}>
+                  <MessageSquare className="w-5 h-5" style={{ color: BRAND }} />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">
@@ -920,24 +1077,23 @@ const StudentDashboard = () => {
 
             <div className="px-6 py-6">
               {selectedMessage.is_important && (
-                <div className="bg-[#F5831F]/10 text-[#F5831F] p-3 rounded-xl border border-[#F5831F]/20 mb-4 flex items-center gap-2">
+                <div className="p-3 rounded-xl mb-4 flex items-center gap-2" style={{ background: 'rgba(245,131,31,0.10)', color: BRAND, border: '1px solid rgba(245,131,31,0.2)' }}>
                   <Star className="w-4 h-4" />
                   <span className="text-sm font-medium">Important Message</span>
                 </div>
               )}
-              
-              {/* Email Sent Indicator */}
-              <div className="flex items-center gap-3 mb-4 p-3 bg-green-50 rounded-xl border border-green-200">
-                <Mail className="w-4 h-4 text-green-600" />
+
+              <div className="flex items-center gap-3 mb-4 p-3 rounded-xl" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                <Mail className="w-4 h-4" style={{ color: '#16A34A' }} />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-green-700">Email Notification Sent</p>
-                  <p className="text-xs text-green-600">
+                  <p className="text-sm font-medium" style={{ color: '#15803D' }}>Email Notification Sent</p>
+                  <p className="text-xs" style={{ color: '#16A34A' }}>
                     A copy of this message was sent to your email address
                   </p>
                 </div>
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5" style={{ color: '#16A34A' }} />
               </div>
-              
+
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                   {selectedMessage.message}
@@ -966,7 +1122,7 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* ===== PAYMENT MODAL ===== */}
+      {/* Payment Modal */}
       <PaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
@@ -975,42 +1131,14 @@ const StudentDashboard = () => {
       />
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { 
-            opacity: 0;
-            transform: translateY(30px) scale(0.98);
-          }
-          to { 
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes bounce {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.3); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-        .animate-bounce {
-          animation: bounce 0.6s ease-in-out 2;
-        }
-        .animate-ping {
-          animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        @keyframes ping {
-          75%, 100% {
-            transform: scale(2);
-            opacity: 0;
-          }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes bounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        .animate-slideUp { animation: slideUp 0.3s ease-out; }
+        .animate-bounce { animation: bounce 0.6s ease-in-out 2; }
+        .animate-ping { animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
       `}</style>
     </div>
   );
@@ -1023,173 +1151,288 @@ const StudentDashboard = () => {
   function renderDashboard() {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {dashboardStats.map((stat) => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-4`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{stat.label}</p>
-                    <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stat.value}</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: `${stat.color}15` }}>
-                    <Icon className="w-5 h-5" style={{ color: stat.color }} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        {/* Welcome heading */}
+        <div>
+          <h1 className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 22, color: isDarkMode ? '#fff' : '#1A1005' }}>
+            Welcome back, {user?.full_name?.split(' ')[0] || user?.fullName?.split(' ')[0] || 'Student'}! 👋
+          </h1>
+          <p style={{ fontSize: 13, color: TEXT_DIM, marginTop: 2 }}>
+            Discover and apply to the best internships and attachments.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>My Applications</h2>
-                <button onClick={() => handleTabClick('applications')} className="text-sm text-[#F5831F] font-medium hover:underline">View All →</button>
+        {/* Stat cards - FIXED: Shows correct saved count */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {dashboardStats.map((stat) => (
+            <div
+              key={stat.label}
+              className="rounded-2xl p-4"
+              style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ width: 40, height: 40, background: 'rgba(245,131,31,0.12)' }}
+                >
+                  <stat.Icon style={{ width: 18, height: 18, color: BRAND }} />
+                </div>
+                <p style={{ fontSize: 12, color: TEXT_DIM }}>{stat.label}</p>
               </div>
-              <div className="space-y-3">
-                {applications.slice(0, 4).map((app, index) => (
-                  <div key={index} className={`flex items-center justify-between py-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-50'} last:border-0`}>
-                    <div>
-                      <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>{app.opportunity?.title || app.title || 'N/A'}</p>
-                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{app.opportunity?.company_name || app.company_name || 'N/A'}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>
-                        {app.status?.toUpperCase() || 'PENDING'}
-                      </span>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{formatDate(app.applied_at)}</span>
-                    </div>
-                  </div>
-                ))}
-                {applications.length === 0 && (
-                  <div className={`text-center py-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>No applications yet.</div>
-                )}
-              </div>
+              <p className="font-bold" style={{ fontSize: 26, color: isDarkMode ? '#fff' : '#1A1005', fontFamily: "'Playfair Display', Georgia, serif" }}>
+                {stat.value}
+              </p>
+              <p style={{ fontSize: 11.5, color: stat.subColor, marginTop: 2, fontWeight: 600 }}>{stat.sub}</p>
             </div>
+          ))}
+        </div>
 
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Recommended Opportunities</h2>
-                <button onClick={() => handleTabClick('browse')} className="text-sm text-[#F5831F] font-medium hover:underline">View All →</button>
-              </div>
-              <div className="space-y-3">
-                {filteredOpportunities.slice(0, 4).map((opp, index) => {
-                  const isSaved = savedIds.has(opp.id);
-                  const isSaving = savingId === opp.id;
-                  
-                  return (
-                    <div key={index} className={`flex items-center justify-between p-3 ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} border rounded-lg hover:shadow-md transition`}>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>{opp.title}</p>
-                          {index < 2 && <span className="bg-[#F5831F] text-white text-[10px] px-2 py-0.5 rounded-full">New</span>}
-                        </div>
-                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{opp.company_name} · {opp.location}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(opp.type)}`}>{opp.type}</span>
-                          <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Deadline: {formatDate(opp.deadline)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleSave(opp.id)}
-                          disabled={isSaving}
-                          className={`group relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-300 ${
-                            isSaved 
-                              ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' 
-                              : 'bg-gray-50 text-gray-400 border border-gray-200 hover:bg-[#F5831F]/10 hover:border-[#F5831F] hover:text-[#F5831F]'
-                          } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          <svg 
-                            className={`w-4 h-4 transition-transform duration-300 ${isSaved ? 'scale-110' : 'scale-100 group-hover:scale-110'}`}
-                            fill={isSaved ? 'currentColor' : 'none'}
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path 
-                              strokeLinecap="round" 
-                              strokeLinejoin="round" 
-                              strokeWidth={2} 
-                              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                            />
-                          </svg>
-                          <span className="text-xs font-medium">{isSaving ? '...' : isSaved ? 'Saved' : 'Save'}</span>
-                        </button>
-                        <Link to={`/apply/${opp.id}`} className="px-3 py-1.5 bg-[#F5831F] text-white text-sm rounded-lg hover:bg-[#e0731a] transition">Apply</Link>
-                      </div>
+        {/* Recommended Opportunities */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Recommended Opportunities</h2>
+            <button onClick={() => handleTabClick('browse')} className="text-sm font-semibold hover:underline" style={{ color: BRAND }}>View All →</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {filteredOpportunities.slice(0, 4).map((opp, index) => {
+              const isSaved = savedIds.has(opp.id);
+              const isSaving = savingId === opp.id;
+              return (
+                <div
+                  key={index}
+                  className="rounded-2xl p-4 flex flex-col transition-all"
+                  style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.06)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div
+                      className="rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-white"
+                      style={{ width: 38, height: 38, background: `linear-gradient(145deg, ${BRAND}, #D4690F)`, fontSize: 13 }}
+                    >
+                      {(opp.company_name || 'C').charAt(0)}
                     </div>
-                  );
-                })}
-                {filteredOpportunities.length === 0 && (
-                  <div className={`text-center py-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>No opportunities available.</div>
-                )}
+                    {index < 2 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,131,31,0.12)', color: BRAND }}>
+                        New
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-semibold leading-snug mb-1" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                    {opp.title}
+                  </p>
+                  <p style={{ fontSize: 11.5, color: TEXT_DIM, marginBottom: 8 }}>
+                    {opp.company_name}
+                  </p>
+                  <p className="flex items-center gap-1" style={{ fontSize: 11, color: TEXT_DIM, marginBottom: 10 }}>
+                    <MapPin style={{ width: 11, height: 11 }} /> {opp.location}
+                  </p>
+                  <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getTypeColor(opp.type)}`}>{opp.type}</span>
+                  </div>
+                  <p style={{ fontSize: 10.5, color: TEXT_DIM, marginBottom: 12 }}>
+                    Deadline: {formatDate(opp.deadline)}
+                  </p>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <Link
+                      to={`/apply/${opp.id}`}
+                      className="flex-1 text-center text-white font-semibold rounded-lg transition-all"
+                      style={{ background: BRAND, fontSize: 12, padding: '8px 0' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#D4690F')}
+                      onMouseLeave={e => (e.currentTarget.style.background = BRAND)}
+                    >
+                      Apply
+                    </Link>
+                    <button
+                      onClick={() => handleToggleSave(opp.id)}
+                      disabled={isSaving}
+                      className="flex items-center justify-center rounded-lg flex-shrink-0 transition-all"
+                      style={{
+                        width: 32, height: 32,
+                        background: isSaved ? 'rgba(245,131,31,0.12)' : (isDarkMode ? '#242019' : '#F7F5F1'),
+                        color: isSaved ? BRAND : TEXT_DIM,
+                      }}
+                    >
+                      <Bookmark style={{ width: 14, height: 14 }} fill={isSaved ? BRAND : 'none'} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {filteredOpportunities.length === 0 && (
+              <div className="col-span-full text-center py-10" style={{ color: TEXT_DIM, fontSize: 13 }}>
+                No opportunities available yet.
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* 3-column row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Application Status */}
+          <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>Application Status</h3>
+              <button onClick={() => handleTabClick('applications')} className="text-xs font-semibold hover:underline" style={{ color: BRAND }}>View All →</button>
+            </div>
+            <div className="space-y-3.5">
+              {applications.slice(0, 4).map((app, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate" style={{ fontSize: 12.5, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                      {app.opportunity?.title || app.title || 'N/A'}
+                    </p>
+                    <p style={{ fontSize: 11, color: TEXT_DIM }}>{app.opportunity?.company_name || app.company_name || 'N/A'}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0 ml-3">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${getStatusColor(app.status)}`}>
+                      {(app.status || 'pending').charAt(0).toUpperCase() + (app.status || 'pending').slice(1)}
+                    </span>
+                    <p style={{ fontSize: 10, color: TEXT_DIM, marginTop: 2 }}>{formatDate(app.applied_at)}</p>
+                  </div>
+                </div>
+              ))}
+              {applications.length === 0 && (
+                <p style={{ fontSize: 12.5, color: TEXT_DIM, textAlign: 'center', padding: '16px 0' }}>No applications yet.</p>
+              )}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-[#F5831F] to-[#e0731a] rounded-xl p-5 text-white">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm font-medium opacity-90">Congratulations!</p>
-                  <h3 className="text-lg font-bold mt-1">You got {stats.interview + stats.shortlisted} new</h3>
-                  <p className="text-lg font-bold">opportunities</p>
-                  <button className="mt-3 bg-white/20 text-white text-sm px-4 py-1.5 rounded-lg hover:bg-white/30 transition">This week</button>
-                </div>
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center"><Award className="w-6 h-6" /></div>
-              </div>
+          {/* Recent Messages */}
+          <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>Recent Messages</h3>
+              <button onClick={() => handleTabClick('messages')} className="text-xs font-semibold hover:underline" style={{ color: BRAND }}>View All →</button>
             </div>
-
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>Recent Messages</h3>
-                <button onClick={() => handleTabClick('messages')} className="text-xs text-[#F5831F] font-medium hover:underline">View All →</button>
-              </div>
-              <div className="space-y-3">
-                {messages.slice(0, 3).map((msg, index) => (
-                  <div key={index} className={`pb-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-50'} last:border-0 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition`} onClick={() => handleMessageClick(msg.id)}>
-                    <div className="flex items-center gap-2">
-                      <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>{msg.sender_name || 'Admin'}</p>
-                      {!msg.is_read && <span className="w-2 h-2 rounded-full bg-[#F5831F] animate-pulse"></span>}
+            <div className="space-y-3.5">
+              {messages.slice(0, 3).map((msg, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2.5 cursor-pointer rounded-lg p-1.5 -m-1.5 transition-colors"
+                  onClick={() => handleMessageClick(msg.id)}
+                  onMouseEnter={e => (e.currentTarget.style.background = isDarkMode ? '#242019' : '#F7F5F1')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div
+                    className="rounded-full flex items-center justify-center flex-shrink-0 font-bold text-white"
+                    style={{ width: 30, height: 30, background: `linear-gradient(145deg, ${BRAND}, #D4690F)`, fontSize: 11 }}
+                  >
+                    {(msg.sender_name || 'A').charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium truncate" style={{ fontSize: 12.5, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                        {msg.sender_name || 'Admin'}
+                      </p>
+                      {!msg.is_read && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: BRAND }} />}
                     </div>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} truncate`}>{msg.message}</p>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} mt-0.5`}>{msg.time_ago || 'Just now'}</p>
+                    <p className="truncate" style={{ fontSize: 11.5, color: TEXT_DIM }}>{msg.message}</p>
                   </div>
-                ))}
-                {messages.length === 0 && (
-                  <div className={`text-center py-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>No messages yet</div>
-                )}
-              </div>
-            </div>
-
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-              <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm mb-3`}>Tips for You</h3>
-              <div className="space-y-2">
-                <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
-                  <div className="w-6 h-6 rounded-full bg-[#F5831F]/10 flex items-center justify-center flex-shrink-0 mt-0.5"><TrendingUp className="w-3 h-3 text-[#F5831F]" /></div>
-                  <div>
-                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>Complete your profile</p>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Add more details to stand out.</p>
-                  </div>
+                  <p style={{ fontSize: 10, color: TEXT_DIM, flexShrink: 0 }}>{msg.time_ago || 'Now'}</p>
                 </div>
-                <div className="flex items-start gap-2 p-2 rounded-lg hover:bg-gray-50 transition">
-                  <div className="w-6 h-6 rounded-full bg-[#F5831F]/10 flex items-center justify-center flex-shrink-0 mt-0.5"><File className="w-3 h-3 text-[#F5831F]" /></div>
-                  <div>
-                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>Upload your CV</p>
-                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>A complete CV increases viability.</p>
-                  </div>
-                </div>
-              </div>
+              ))}
+              {messages.length === 0 && (
+                <p style={{ fontSize: 12.5, color: TEXT_DIM, textAlign: 'center', padding: '16px 0' }}>No messages yet.</p>
+              )}
             </div>
+            {messages.length > 0 && (
+              <button
+                onClick={() => handleTabClick('messages')}
+                className="w-full mt-4 text-center font-semibold rounded-lg transition-all"
+                style={{ background: isDarkMode ? '#242019' : '#F7F5F1', color: isDarkMode ? '#fff' : '#1A1005', fontSize: 12, padding: '9px 0' }}
+              >
+                Go to Messages
+              </button>
+            )}
+          </div>
 
-            <div className="bg-gradient-to-r from-[#8B5E3C] to-[#6B4226] rounded-xl p-5 text-white">
-              <h3 className="font-bold text-sm">Standout to top</h3>
-              <p className="text-sm font-bold mb-1">companies</p>
-              <p className="text-xs opacity-80 mb-3">Make your profile visible to over 500+ companies.</p>
-              <button className="bg-white text-[#8B5E3C] text-sm px-4 py-1.5 rounded-lg font-medium hover:bg-gray-100 transition">Upgrade Profile →</button>
+          {/* Tips for You */}
+          <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <h3 className="font-bold mb-4" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>Tips for You</h3>
+            <div className="space-y-3">
+              {[
+                { Icon: TrendingUp, title: 'Complete your profile', body: 'Add more details to stand out.' },
+                { Icon: File,       title: 'Upload your CV',        body: 'A complete CV increases visibility.' },
+                { Icon: Briefcase,  title: 'Apply consistently',    body: 'Top students apply to 5+ jobs weekly.' },
+                { Icon: Calendar,   title: 'Attend webinars',       body: 'Improve skills and boost your profile.' },
+              ].map((tip, i) => (
+                <button
+                  key={i}
+                  className="w-full flex items-center gap-3 text-left rounded-lg p-1.5 -m-1.5 transition-colors"
+                  onMouseEnter={e => (e.currentTarget.style.background = isDarkMode ? '#242019' : '#F7F5F1')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 30, height: 30, background: 'rgba(245,131,31,0.12)' }}>
+                    <tip.Icon style={{ width: 14, height: 14, color: BRAND }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium" style={{ fontSize: 12.5, color: isDarkMode ? '#fff' : '#1A1005' }}>{tip.title}</p>
+                    <p style={{ fontSize: 11, color: TEXT_DIM }}>{tip.body}</p>
+                  </div>
+                  <ChevronRight style={{ width: 14, height: 14, color: TEXT_DIM, flexShrink: 0 }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Stand out to top companies */}
+          <div
+            className="lg:col-span-2 rounded-2xl p-6 relative overflow-hidden flex items-center justify-between gap-6"
+            style={{ background: 'linear-gradient(110deg, #F3E2C8 0%, #FBF2E4 100%)' }}
+          >
+            <div className="relative z-10">
+              <h3 className="font-bold mb-1" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 17, color: '#1A1005' }}>
+                Stand out to top companies
+              </h3>
+              <p style={{ fontSize: 12.5, color: '#7A6A52', maxWidth: 360, lineHeight: 1.6 }}>
+                Make your profile visible to over 500+ companies actively looking for talent like you.
+              </p>
+              <button
+                className="mt-4 flex items-center gap-2 font-semibold text-white transition-all"
+                style={{ background: '#3D2A18', fontSize: 12.5, padding: '10px 20px', borderRadius: 10 }}
+                onMouseEnter={e => (e.currentTarget.style.background = BRAND)}
+                onMouseLeave={e => (e.currentTarget.style.background = '#3D2A18')}
+              >
+                Upgrade Profile <ChevronRight style={{ width: 14, height: 14 }} />
+              </button>
+            </div>
+            <div className="hidden md:flex relative z-10 flex-shrink-0 items-end" style={{ width: 130, height: 110 }}>
+              <svg viewBox="0 0 130 110" width="130" height="110">
+                <rect x="20" y="50" width="35" height="50" rx="6" fill="#D4A24A" opacity="0.85"/>
+                <circle cx="37" cy="36" r="14" fill="#8B5E3C"/>
+                <rect x="70" y="35" width="45" height="60" rx="6" fill="#fff" stroke="#E5D5BA" strokeWidth="1.5"/>
+                <rect x="78" y="45" width="29" height="4" rx="2" fill="#F5831F"/>
+                <rect x="78" y="55" width="22" height="3" rx="1.5" fill="#E5D5BA"/>
+                <rect x="78" y="63" width="25" height="3" rx="1.5" fill="#E5D5BA"/>
+                <circle cx="92" cy="78" r="8" fill="#16A34A"/>
+                <path d="M88 78l3 3 6-6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>Upcoming Events</h3>
+              <button onClick={() => handleTabClick('events')} className="text-xs font-semibold hover:underline" style={{ color: BRAND }}>View All →</button>
+            </div>
+            <div className="flex items-center gap-3.5">
+              <div
+                className="flex flex-col items-center justify-center rounded-xl flex-shrink-0"
+                style={{ width: 52, height: 52, background: 'rgba(245,131,31,0.10)' }}
+              >
+                <span className="font-bold" style={{ fontSize: 9.5, color: BRAND, letterSpacing: '0.05em' }}>MAY</span>
+                <span className="font-bold" style={{ fontSize: 17, color: BRAND, lineHeight: 1 }}>24</span>
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold truncate" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>CV Writing Workshop</p>
+                <p style={{ fontSize: 11.5, color: TEXT_DIM }}>Online Webinar</p>
+                <p className="flex items-center gap-1 mt-0.5" style={{ fontSize: 11, color: TEXT_DIM }}>
+                  <Clock style={{ width: 11, height: 11 }} /> 2:00 PM
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1202,33 +1445,44 @@ const StudentDashboard = () => {
     return (
       <div className="space-y-6">
         {profileMessage && (
-          <div className="bg-green-50 text-green-700 p-4 rounded-xl border border-green-200">{profileMessage}</div>
+          <div className="rounded-xl p-4" style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', fontSize: 13 }}>{profileMessage}</div>
         )}
 
-        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
+        <div className="rounded-2xl p-6" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
           <div className="flex flex-wrap items-start gap-6">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#F5831F] to-[#e0731a] rounded-2xl flex items-center justify-center text-white text-3xl font-bold flex-shrink-0 shadow-lg">
-              {user?.full_name?.split(' ').map(n => n[0]).join('') || user?.fullName?.split(' ').map(n => n[0]).join('') || 'U'}
+            <div
+              className="rounded-2xl flex items-center justify-center text-white font-bold flex-shrink-0"
+              style={{ width: 88, height: 88, fontSize: 28, background: `linear-gradient(145deg, ${BRAND}, #D4690F)` }}
+            >
+              {(user?.full_name || user?.fullName || 'U').split(' ').map(n => n[0]).join('').slice(0,2)}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user?.full_name || user?.fullName || 'Student'}</h2>
-                  <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{user?.email}</p>
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-sm">
-                    <span className={`flex items-center gap-1 ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-500'} px-3 py-1 rounded-full`}>
-                      <GraduationCap className="w-4 h-4 text-[#F5831F]" /> {user?.course || 'Not set'}, {user?.university || 'Not set'}
+                  <h2 className="font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 21, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                    {user?.full_name || user?.fullName || 'Student'}
+                  </h2>
+                  <p style={{ fontSize: 13, color: TEXT_DIM }}>{user?.email}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ fontSize: 12, background: isDarkMode ? '#242019' : '#F7F5F1', color: TEXT_DIM }}>
+                      <GraduationCap style={{ width: 13, height: 13, color: BRAND }} /> {user?.course || 'Not set'}, {user?.university || 'Not set'}
                     </span>
-                    <span className={`flex items-center gap-1 ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-500'} px-3 py-1 rounded-full`}>
-                      <MapPin className="w-4 h-4 text-[#F5831F]" /> {user?.location || 'Not set'}
+                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ fontSize: 12, background: isDarkMode ? '#242019' : '#F7F5F1', color: TEXT_DIM }}>
+                      <MapPin style={{ width: 13, height: 13, color: BRAND }} /> {user?.location || 'Not set'}
                     </span>
-                    <span className={`flex items-center gap-1 ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-500'} px-3 py-1 rounded-full`}>
-                      <Calendar className="w-4 h-4 text-[#F5831F]" /> {user?.yearOfStudy || 'Not set'}
+                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full" style={{ fontSize: 12, background: isDarkMode ? '#242019' : '#F7F5F1', color: TEXT_DIM }}>
+                      <Calendar style={{ width: 13, height: 13, color: BRAND }} /> {user?.yearOfStudy || 'Not set'}
                     </span>
                   </div>
                 </div>
-                <button onClick={handleOpenEditModal} className="flex items-center gap-2 px-5 py-2.5 bg-[#F5831F] text-white rounded-lg hover:bg-[#e0731a] transition shadow-md hover:shadow-lg">
-                  <Edit2 className="w-4 h-4" /> Edit Profile
+                <button
+                  onClick={handleOpenEditModal}
+                  className="flex items-center gap-2 font-semibold text-white rounded-xl transition-all"
+                  style={{ background: '#3D2A18', fontSize: 13, padding: '10px 18px' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = BRAND)}
+                  onMouseLeave={e => (e.currentTarget.style.background = '#3D2A18')}
+                >
+                  <Edit2 style={{ width: 14, height: 14 }} /> Edit Profile
                 </button>
               </div>
             </div>
@@ -1236,59 +1490,56 @@ const StudentDashboard = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl p-4 shadow-sm border`}>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Applied</p>
-            <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.applied}</p>
-          </div>
-          <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl p-4 shadow-sm border`}>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Shortlisted</p>
-            <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.shortlisted}</p>
-          </div>
-          <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl p-4 shadow-sm border`}>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Interview</p>
-            <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.interview}</p>
-          </div>
-          <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl p-4 shadow-sm border`}>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Accepted</p>
-            <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.accepted}</p>
-          </div>
+          {[
+            { label: 'Applied',     value: stats.applied },
+            { label: 'Shortlisted', value: stats.shortlisted },
+            { label: 'Interview',   value: stats.interview },
+            { label: 'Accepted',    value: stats.accepted },
+          ].map(s => (
+            <div key={s.label} className="rounded-2xl p-4" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+              <p style={{ fontSize: 12, color: TEXT_DIM }}>{s.label}</p>
+              <p className="font-bold" style={{ fontSize: 22, color: isDarkMode ? '#fff' : '#1A1005', fontFamily: "'Playfair Display', Georgia, serif" }}>{s.value}</p>
+            </div>
+          ))}
         </div>
 
-        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
-          <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4 flex items-center gap-2`}>
-            <User className="w-5 h-5 text-[#F5831F]" /> Personal Information
+        <div className="rounded-2xl p-6" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+          <h3 className="font-bold mb-4 flex items-center gap-2" style={{ fontSize: 15, color: isDarkMode ? '#fff' : '#1A1005' }}>
+            <User style={{ width: 17, height: 17, color: BRAND }} /> Personal Information
           </h3>
           <div className="grid md:grid-cols-2 gap-4">
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Full Name</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.full_name || user?.fullName || 'Not set'}</p></div>
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Email</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.email || 'Not set'}</p></div>
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Phone</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.phone || 'Not provided'}</p></div>
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Location</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.location || 'Not provided'}</p></div>
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>University</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.university || 'Not provided'}</p></div>
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Course</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.course || 'Not provided'}</p></div>
-            <div><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Year of Study</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-900 border-gray-100'} p-3 rounded-lg border`}>{user?.yearOfStudy || 'Not provided'}</p></div>
-            <div className="md:col-span-2"><label className={`block text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Bio</label>
-            <p className={`${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-gray-50 text-gray-600 border-gray-100'} p-3 rounded-lg border`}>{user?.bio || 'No bio provided'}</p></div>
+            {[
+              ['Full Name', user?.full_name || user?.fullName || 'Not set'],
+              ['Email', user?.email || 'Not set'],
+              ['Phone', user?.phone || 'Not provided'],
+              ['Location', user?.location || 'Not provided'],
+              ['University', user?.university || 'Not provided'],
+              ['Course', user?.course || 'Not provided'],
+              ['Year of Study', user?.yearOfStudy || 'Not provided'],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <label style={{ fontSize: 12, color: TEXT_DIM, display: 'block', marginBottom: 4 }}>{label}</label>
+                <p className="rounded-lg p-3" style={{ fontSize: 13, background: isDarkMode ? '#242019' : '#F7F5F1', color: isDarkMode ? '#fff' : '#1A1005', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>{value}</p>
+              </div>
+            ))}
+            <div className="md:col-span-2">
+              <label style={{ fontSize: 12, color: TEXT_DIM, display: 'block', marginBottom: 4 }}>Bio</label>
+              <p className="rounded-lg p-3" style={{ fontSize: 13, background: isDarkMode ? '#242019' : '#F7F5F1', color: isDarkMode ? '#D1D5DB' : '#4B5563', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>{user?.bio || 'No bio provided'}</p>
+            </div>
           </div>
         </div>
 
-        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
-          <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4 flex items-center gap-2`}>
-            <FileText className="w-5 h-5 text-[#F5831F]" /> Skills
+        <div className="rounded-2xl p-6" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+          <h3 className="font-bold mb-4 flex items-center gap-2" style={{ fontSize: 15, color: isDarkMode ? '#fff' : '#1A1005' }}>
+            <FileText style={{ width: 17, height: 17, color: BRAND }} /> Skills
           </h3>
           <div className="flex flex-wrap gap-2">
             {user?.skills?.length > 0 ? (
               user.skills.map((skill, index) => (
-                <span key={index} className="bg-[#F5831F]/10 text-[#F5831F] px-4 py-1.5 rounded-full text-sm font-medium border border-[#F5831F]/20">{skill}</span>
+                <span key={index} className="px-4 py-1.5 rounded-full font-medium" style={{ fontSize: 12.5, background: 'rgba(245,131,31,0.10)', color: BRAND, border: '1px solid rgba(245,131,31,0.2)' }}>{skill}</span>
               ))
             ) : (
-              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No skills added yet</p>
+              <p style={{ fontSize: 13, color: TEXT_DIM }}>No skills added yet</p>
             )}
           </div>
         </div>
@@ -1299,35 +1550,35 @@ const StudentDashboard = () => {
   // ===== APPLICATIONS =====
   function renderApplications() {
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>My Applications</h2>
-          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{applications.length} applied</span>
+          <h2 className="font-bold" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>My Applications</h2>
+          <span style={{ fontSize: 13, color: TEXT_DIM }}>{applications.length} applied</span>
         </div>
         <div className="space-y-3">
           {applications.length > 0 ? (
             applications.map((app, index) => (
-              <div key={index} className={`flex items-center justify-between py-3 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-50'} last:border-0`}>
+              <div key={index} className="flex items-center justify-between py-3" style={{ borderBottom: index < applications.length - 1 ? `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` : 'none' }}>
                 <div>
-                  <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{app.opportunity?.title || app.title || 'N/A'}</p>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{app.opportunity?.company_name || app.company_name || 'N/A'}</p>
+                  <p className="font-medium" style={{ fontSize: 13.5, color: isDarkMode ? '#fff' : '#1A1005' }}>{app.opportunity?.title || app.title || 'N/A'}</p>
+                  <p style={{ fontSize: 12, color: TEXT_DIM }}>{app.opportunity?.company_name || app.company_name || 'N/A'}</p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(app.status)}`}>{app.status?.toUpperCase() || 'PENDING'}</span>
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{formatDate(app.applied_at)}</span>
+                <div className="flex items-center gap-3">
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${getStatusColor(app.status)}`}>{(app.status || 'pending').toUpperCase()}</span>
+                  <span style={{ fontSize: 11, color: TEXT_DIM }}>{formatDate(app.applied_at)}</span>
                   {app.status === 'pending' && (
-                    <button onClick={() => handlePayNow(app)} className="px-3 py-1 bg-[#F5831F] text-white text-xs rounded-lg hover:bg-[#e0731a] transition">Pay Now</button>
+                    <button onClick={() => handlePayNow(app)} className="px-3 py-1.5 text-white text-xs font-semibold rounded-lg transition-all" style={{ background: BRAND }} onMouseEnter={e => (e.currentTarget.style.background = '#D4690F')} onMouseLeave={e => (e.currentTarget.style.background = BRAND)}>Pay Now</button>
                   )}
-                  <button onClick={() => handleRemove(app.id)} className="text-xs text-red-500 hover:text-red-700 transition">Remove</button>
+                  <button onClick={() => handleRemove(app.id)} className="text-xs font-medium" style={{ color: '#DC2626' }}>Remove</button>
                 </div>
               </div>
             ))
           ) : (
-            <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+            <div className="text-center py-12" style={{ color: TEXT_DIM }}>
+              <FileText className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
               <p className="text-lg font-medium">No Applications</p>
               <p className="text-sm">Start browsing and apply to opportunities!</p>
-              <button onClick={() => handleTabClick('browse')} className="mt-3 bg-[#F5831F] text-white px-4 py-2 rounded-lg hover:bg-[#e0731a] transition">Browse Opportunities</button>
+              <button onClick={() => handleTabClick('browse')} className="mt-3 text-white px-4 py-2 rounded-lg transition-all" style={{ background: BRAND }}>Browse Opportunities</button>
             </div>
           )}
         </div>
@@ -1354,47 +1605,39 @@ const StudentDashboard = () => {
     };
 
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Saved Opportunities</h2>
-          <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{savedOpportunities.length} saved</span>
+          <h2 className="font-bold" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Saved Opportunities</h2>
+          <span style={{ fontSize: 13, color: TEXT_DIM }}>{savedOpportunities.length} saved</span>
         </div>
-        
+
         {savedOpportunities.length > 0 ? (
           <div className="space-y-4">
             {savedOpportunities.map((job) => (
-              <div key={job.id} className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} border rounded-lg hover:shadow-md transition`}>
+              <div key={job.id} className="flex items-center justify-between p-4 rounded-xl transition-all" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
                 <div>
-                  <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{job.title}</p>
-                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{job.company_name} · {job.location}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(job.type)}`}>{job.type}</span>
-                    <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Closes {formatDate(job.deadline)}</span>
-                    {job.saved_at && (
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Saved: {new Date(job.saved_at).toLocaleDateString()}
-                      </span>
-                    )}
+                  <p className="font-medium" style={{ fontSize: 13.5, color: isDarkMode ? '#fff' : '#1A1005' }}>{job.title}</p>
+                  <p style={{ fontSize: 12, color: TEXT_DIM }}>{job.company_name} · {job.location}</p>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className={`text-[10.5px] px-2 py-0.5 rounded-full font-medium ${getTypeColor(job.type)}`}>{job.type}</span>
+                    <span style={{ fontSize: 11, color: TEXT_DIM }}>Closes {formatDate(job.deadline)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link to={`/apply/${job.id}`} className="px-3 py-1.5 bg-[#F5831F] text-white text-sm rounded-lg hover:bg-[#e0731a] transition">Apply</Link>
-                  <button onClick={() => handleRemoveSaved(job.id)} className="px-3 py-1.5 bg-red-50 text-red-600 text-sm rounded-lg hover:bg-red-100 transition flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Remove
+                  <Link to={`/apply/${job.id}`} className="px-3.5 py-1.5 text-white text-sm font-medium rounded-lg transition-all" style={{ background: BRAND }}>Apply</Link>
+                  <button onClick={() => handleRemoveSaved(job.id)} className="px-3.5 py-1.5 text-sm rounded-lg transition flex items-center gap-1 font-medium" style={{ background: '#FBEAE5', color: '#C0392B' }}>
+                    <X className="w-3.5 h-3.5" /> Remove
                   </button>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            <Bookmark className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <div className="text-center py-12" style={{ color: TEXT_DIM }}>
+            <Bookmark className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
             <p className="text-lg font-medium">No Saved Opportunities</p>
-            <p className="text-sm">Save opportunities you're interested in by clicking the ❤️ button</p>
-            <button onClick={() => handleTabClick('browse')} className="mt-3 bg-[#F5831F] text-white px-4 py-2 rounded-lg hover:bg-[#e0731a] transition">Browse Opportunities</button>
+            <p className="text-sm">Save opportunities you're interested in.</p>
+            <button onClick={() => handleTabClick('browse')} className="mt-3 text-white px-4 py-2 rounded-lg transition-all" style={{ background: BRAND }}>Browse Opportunities</button>
           </div>
         )}
       </div>
@@ -1405,24 +1648,24 @@ const StudentDashboard = () => {
   function renderBrowse() {
     return (
       <div className="space-y-6">
-        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
-          <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Browse Opportunities</h2>
-          <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>Discover {opportunities.length} verified opportunities.</p>
+        <div className="rounded-2xl p-6" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+          <h2 className="font-bold mb-1" style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 20, color: isDarkMode ? '#fff' : '#1A1005' }}>Browse Opportunities</h2>
+          <p style={{ fontSize: 13, color: TEXT_DIM }}>Discover {opportunities.length} verified opportunities.</p>
         </div>
 
-        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
+        <div className="rounded-2xl p-6" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <input type="text" placeholder="Search by title, company..." value={browseSearchTerm} onChange={(e) => setBrowseSearchTerm(e.target.value)} className={`w-full px-4 py-2.5 pl-10 rounded-lg border ${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'} text-sm focus:outline-none focus:ring-2 focus:ring-[#F5831F]`} />
+              <Search className="absolute left-3 top-3 w-4 h-4" style={{ color: TEXT_DIM }} />
+              <input type="text" placeholder="Search by title, company..." value={browseSearchTerm} onChange={(e) => setBrowseSearchTerm(e.target.value)} className="w-full px-4 py-2.5 pl-10 rounded-lg text-sm outline-none transition-all" style={{ background: isDarkMode ? '#242019' : '#F7F5F1', color: isDarkMode ? '#fff' : '#111', border: `1px solid ${isDarkMode ? '#2A2218' : 'transparent'}` }} onFocus={e => e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.10)`} onBlur={e => e.target.style.boxShadow = 'none'} />
             </div>
-            <select value={browseType} onChange={(e) => setBrowseType(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg border ${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'} text-sm focus:outline-none focus:ring-2 focus:ring-[#F5831F]`}>
+            <select value={browseType} onChange={(e) => setBrowseType(e.target.value)} className="w-full px-4 py-2.5 rounded-lg text-sm outline-none transition-all" style={{ background: isDarkMode ? '#242019' : '#F7F5F1', color: isDarkMode ? '#fff' : '#111', border: `1px solid ${isDarkMode ? '#2A2218' : 'transparent'}` }}>
               <option value="All Types">All Types</option>
               <option value="Internship">Internship</option>
               <option value="Attachment">Attachment</option>
               <option value="Graduate Trainee">Graduate Trainee</option>
             </select>
-            <select value={browseLocation} onChange={(e) => setBrowseLocation(e.target.value)} className={`w-full px-4 py-2.5 rounded-lg border ${isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-900 border-gray-200'} text-sm focus:outline-none focus:ring-2 focus:ring-[#F5831F]`}>
+            <select value={browseLocation} onChange={(e) => setBrowseLocation(e.target.value)} className="w-full px-4 py-2.5 rounded-lg text-sm outline-none transition-all" style={{ background: isDarkMode ? '#242019' : '#F7F5F1', color: isDarkMode ? '#fff' : '#111', border: `1px solid ${isDarkMode ? '#2A2218' : 'transparent'}` }}>
               <option value="">Filter by location...</option>
               <option value="Nairobi">Nairobi</option>
               <option value="Mombasa">Mombasa</option>
@@ -1434,8 +1677,8 @@ const StudentDashboard = () => {
         </div>
 
         <div className="flex justify-between items-center">
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{filteredOpportunities.length} opportunities found</p>
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>❤️ {savedOpportunities.length} saved</p>
+          <p style={{ fontSize: 13, color: TEXT_DIM }}>{filteredOpportunities.length} opportunities found</p>
+          <p style={{ fontSize: 13, color: TEXT_DIM }}>{savedOpportunities.length} saved</p>
         </div>
 
         <div className="space-y-4">
@@ -1443,69 +1686,47 @@ const StudentDashboard = () => {
             filteredOpportunities.map((opp) => {
               const isSaved = savedIds.has(opp.id);
               const isSaving = savingId === opp.id;
-              
+
               return (
-                <div key={opp.id} className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5 hover:shadow-md transition`}>
+                <div key={opp.id} className="rounded-2xl p-5 transition-all" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="flex-1">
-                      <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{opp.title}</h3>
-                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{opp.company_name} · {opp.location}</p>
+                      <h3 className="font-bold" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>{opp.title}</h3>
+                      <p style={{ fontSize: 12.5, color: TEXT_DIM }}>{opp.company_name} · {opp.location}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <span className={`text-xs px-3 py-0.5 rounded-full font-medium ${getTypeColor(opp.type)}`}>{opp.type}</span>
-                        <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Closes {formatDate(opp.deadline)}</span>
-                        {opp.stipend && <span className="text-xs text-green-600 font-medium">💰 {opp.stipend}</span>}
+                        <span className={`text-[11px] px-3 py-0.5 rounded-full font-medium ${getTypeColor(opp.type)}`}>{opp.type}</span>
+                        <span style={{ fontSize: 11, color: TEXT_DIM }}>Closes {formatDate(opp.deadline)}</span>
+                        {opp.stipend && <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 600 }}>{opp.stipend}</span>}
                       </div>
                     </div>
-                    
+
                     <button
                       onClick={() => handleToggleSave(opp.id)}
                       disabled={isSaving}
-                      className={`group relative flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ${
-                        isSaved 
-                          ? 'bg-red-50 text-red-600 border-2 border-red-200 hover:bg-red-100 hover:scale-105' 
-                          : 'bg-gray-50 text-gray-500 border-2 border-gray-200 hover:bg-[#F5831F]/10 hover:border-[#F5831F] hover:text-[#F5831F] hover:scale-105'
-                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all"
+                      style={{
+                        background: isSaved ? 'rgba(245,131,31,0.10)' : (isDarkMode ? '#242019' : '#F7F5F1'),
+                        color: isSaved ? BRAND : TEXT_DIM,
+                        border: `1.5px solid ${isSaved ? 'rgba(245,131,31,0.3)' : 'transparent'}`,
+                      }}
                     >
-                      <span className="relative">
-                        <svg 
-                          className={`w-5 h-5 transition-transform duration-300 ${isSaved ? 'scale-110' : 'scale-100 group-hover:scale-110'}`}
-                          fill={isSaved ? 'currentColor' : 'none'}
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path 
-                            strokeLinecap="round" 
-                            strokeLinejoin="round" 
-                            strokeWidth={2} 
-                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                          />
-                        </svg>
-                        
-                        {isSaved && (
-                          <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-20"></span>
-                        )}
-                      </span>
-                      
-                      <span className="text-sm font-medium">{isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}</span>
-                      
-                      {isSaved && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-bounce"></span>
-                      )}
+                      <Bookmark style={{ width: 16, height: 16 }} fill={isSaved ? BRAND : 'none'} />
+                      <span style={{ fontSize: 12.5, fontWeight: 600 }}>{isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save'}</span>
                     </button>
                   </div>
-                  
-                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}">
-                    <Link to={`/opportunity/${opp.id}`} className="text-sm font-medium text-[#F5831F] hover:underline">See more details →</Link>
-                    <Link to={`/apply/${opp.id}`} className="px-6 py-1.5 bg-[#F5831F] text-white text-sm font-medium rounded-lg hover:bg-[#e0731a] transition">Apply</Link>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3" style={{ borderTop: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+                    <Link to={`/opportunity/${opp.id}`} className="text-sm font-semibold hover:underline" style={{ color: BRAND }}>See more details →</Link>
+                    <Link to={`/apply/${opp.id}`} className="px-6 py-1.5 text-white text-sm font-medium rounded-lg transition-all" style={{ background: BRAND }} onMouseEnter={e => (e.currentTarget.style.background = '#D4690F')} onMouseLeave={e => (e.currentTarget.style.background = BRAND)}>Apply</Link>
                   </div>
                 </div>
               );
             })
           ) : (
-            <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl p-12 text-center border`}>
-              <Search className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>No opportunities found</h3>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Try adjusting your search or filters</p>
+            <div className="rounded-2xl p-12 text-center" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+              <Search className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3, color: TEXT_DIM }} />
+              <h3 className="font-bold mb-2" style={{ fontSize: 17, color: isDarkMode ? '#fff' : '#1A1005' }}>No opportunities found</h3>
+              <p style={{ fontSize: 13, color: TEXT_DIM }}>Try adjusting your search or filters</p>
             </div>
           )}
         </div>
@@ -1517,85 +1738,57 @@ const StudentDashboard = () => {
   function renderMessages() {
     if (loadingMessages) {
       return (
-        <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-12 text-center`}>
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F5831F] mx-auto"></div>
-          <p className={`mt-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading messages...</p>
+        <div className="rounded-2xl p-12 text-center" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-transparent mx-auto" style={{ borderColor: `${BRAND} transparent ${BRAND} ${BRAND}` }}></div>
+          <p className="mt-3" style={{ color: TEXT_DIM }}>Loading messages...</p>
         </div>
       );
     }
 
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Messages
-            {unreadCount > 0 && (
-              <span className="ml-2 text-sm font-normal text-[#F5831F]">
-                ({unreadCount} unread)
-              </span>
-            )}
+          <h2 className="font-bold" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>
+            Messages {unreadCount > 0 && <span style={{ fontSize: 13, fontWeight: 500, color: BRAND }}>({unreadCount} unread)</span>}
           </h2>
           {unreadCount > 0 && (
-            <button 
-              onClick={handleMarkAllAsRead}
-              className="text-xs text-[#F5831F] hover:underline font-medium"
-            >
-              Mark all as read
-            </button>
+            <button onClick={handleMarkAllAsRead} className="text-xs font-semibold hover:underline" style={{ color: BRAND }}>Mark all as read</button>
           )}
         </div>
-        
+
         {messages.length > 0 ? (
           <div className="space-y-3">
             {messages.map((msg) => (
-              <div 
-                key={msg.id} 
-                className={`p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:bg-gray-50'} border rounded-lg transition cursor-pointer ${
-                  !msg.is_read ? (isDarkMode ? 'bg-gray-700/50 border-[#F5831F]/30' : 'bg-blue-50/50 border-blue-200') : ''
-                } ${msg.is_important ? 'border-l-4 border-l-[#F5831F]' : ''}`}
+              <div
+                key={msg.id}
+                className="p-4 rounded-xl transition cursor-pointer"
+                style={{
+                  border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}`,
+                  background: !msg.is_read ? 'rgba(245,131,31,0.04)' : 'transparent',
+                  borderLeft: msg.is_important ? `3px solid ${BRAND}` : undefined,
+                }}
                 onClick={() => handleMessageClick(msg.id)}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>
-                        {msg.sender_name || 'Admin'}
-                      </p>
-                      {!msg.is_read && (
-                        <span className="w-2 h-2 rounded-full bg-[#F5831F] animate-pulse"></span>
-                      )}
+                      <p className="font-medium" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>{msg.sender_name || 'Admin'}</p>
+                      {!msg.is_read && <span className="w-1.5 h-1.5 rounded-full" style={{ background: BRAND }} />}
                       {msg.is_important && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-[#F5831F]/20 text-[#F5831F] font-medium">
-                          ⭐ Important
-                        </span>
+                        <span className="text-[10.5px] px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(245,131,31,0.12)', color: BRAND }}>Important</span>
                       )}
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        msg.sender_role === 'employer' ? 'bg-blue-100 text-blue-700' : 
-                        msg.sender_role === 'admin' ? 'bg-purple-100 text-purple-700' : 
-                        'bg-gray-100 text-gray-600'
-                      }`}>
-                        {msg.sender_role || 'System'}
-                      </span>
                     </div>
-                    {msg.subject && (
-                      <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mt-1`}>
-                        {msg.subject}
-                      </p>
-                    )}
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1 line-clamp-2`}>
-                      {msg.message}
-                    </p>
+                    {msg.subject && <p className="font-medium mt-1" style={{ fontSize: 13, color: isDarkMode ? '#D1D5DB' : '#374151' }}>{msg.subject}</p>}
+                    <p className="mt-1 line-clamp-2" style={{ fontSize: 12.5, color: TEXT_DIM }}>{msg.message}</p>
                   </div>
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'} flex-shrink-0 ml-4`}>
-                    {msg.time_ago || 'Just now'}
-                  </span>
+                  <span style={{ fontSize: 11, color: TEXT_DIM, flexShrink: 0, marginLeft: 16 }}>{msg.time_ago || 'Just now'}</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            <MessageSquare className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <div className="text-center py-12" style={{ color: TEXT_DIM }}>
+            <MessageSquare className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
             <p className="text-lg font-medium">No Messages</p>
             <p className="text-sm">You don't have any messages yet.</p>
           </div>
@@ -1607,12 +1800,16 @@ const StudentDashboard = () => {
   // ===== NOTIFICATIONS =====
   function renderNotifications() {
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-        <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Notifications</h2>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+        <h2 className="font-bold mb-4" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Notifications</h2>
         <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-            <Bell className="w-5 h-5 text-yellow-600 mt-0.5" />
-            <div><p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'} text-sm`}>New Application Status</p><p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Your application has been shortlisted.</p><p className="text-xs text-gray-400 mt-1">2 hours ago</p></div>
+          <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: 'rgba(245,131,31,0.06)', border: '1px solid rgba(245,131,31,0.15)' }}>
+            <Bell className="w-5 h-5 mt-0.5" style={{ color: BRAND }} />
+            <div>
+              <p className="font-medium" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>New Application Status</p>
+              <p style={{ fontSize: 12.5, color: TEXT_DIM }}>Your application has been shortlisted.</p>
+              <p style={{ fontSize: 11, color: TEXT_DIM, marginTop: 4 }}>2 hours ago</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1622,17 +1819,17 @@ const StudentDashboard = () => {
   // ===== RESUME =====
   function renderResume() {
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-        <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Resume / CV</h2>
-        <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          <File className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>No CV Uploaded</h3>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+        <h2 className="font-bold mb-4" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Resume / CV</h2>
+        <div className="text-center py-12" style={{ color: TEXT_DIM }}>
+          <File className="w-16 h-16 mx-auto mb-4" style={{ opacity: 0.3 }} />
+          <h3 className="font-bold mb-2" style={{ fontSize: 18, color: isDarkMode ? '#fff' : '#1A1005' }}>No CV Uploaded</h3>
           <p className="text-sm mb-6">Upload your CV to apply for opportunities</p>
-          <label className="inline-block bg-[#F5831F] text-white px-6 py-2 rounded-lg hover:bg-[#e0731a] transition cursor-pointer">
+          <label className="inline-block text-white px-6 py-2.5 rounded-xl cursor-pointer transition-all" style={{ background: BRAND }}>
             Upload CV
             <input type="file" accept=".pdf,.doc,.docx" className="hidden" />
           </label>
-          <p className="text-xs text-gray-400 mt-4">PDF, DOC, or DOCX (Max 5MB)</p>
+          <p className="text-xs mt-4" style={{ color: TEXT_DIM }}>PDF, DOC, or DOCX (Max 5MB)</p>
         </div>
       </div>
     );
@@ -1641,13 +1838,13 @@ const StudentDashboard = () => {
   // ===== CAREER =====
   function renderCareer() {
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-        <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Career Resources</h2>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+        <h2 className="font-bold mb-4" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Career Resources</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className={`p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700' : 'border-gray-100 hover:shadow-md'} border rounded-lg transition`}>
-            <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>CV Writing Guide</h3>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Learn how to write a professional CV.</p>
-            <button className="mt-2 text-[#F5831F] text-sm font-medium hover:underline">Read More →</button>
+          <div className="p-4 rounded-xl transition-all" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <h3 className="font-bold" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>CV Writing Guide</h3>
+            <p className="mt-1" style={{ fontSize: 12.5, color: TEXT_DIM }}>Learn how to write a professional CV.</p>
+            <button className="mt-2 text-sm font-semibold hover:underline" style={{ color: BRAND }}>Read More →</button>
           </div>
         </div>
       </div>
@@ -1657,13 +1854,19 @@ const StudentDashboard = () => {
   // ===== EVENTS =====
   function renderEvents() {
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-        <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Events & Webinars</h2>
+      <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+        <h2 className="font-bold mb-4" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Events & Webinars</h2>
         <div className="space-y-4">
-          <div className={`flex items-center gap-4 p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} border rounded-lg hover:shadow-md transition`}>
-            <div className="text-center min-w-[60px]"><p className="text-2xl font-bold text-[#F5831F]">24</p><p className="text-xs text-gray-500">MAY</p></div>
-            <div className="flex-1"><h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>CV Writing Workshop</h3><p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Online Webinar · 2:00 PM</p></div>
-            <button className="px-4 py-1.5 bg-[#F5831F] text-white text-sm rounded-lg hover:bg-[#e0731a] transition">Register</button>
+          <div className="flex items-center gap-4 p-4 rounded-xl transition-all" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <div className="flex flex-col items-center justify-center rounded-xl flex-shrink-0" style={{ width: 56, height: 56, background: 'rgba(245,131,31,0.10)' }}>
+              <span className="font-bold" style={{ fontSize: 18, color: BRAND }}>24</span>
+              <span style={{ fontSize: 10, color: BRAND }}>MAY</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>CV Writing Workshop</h3>
+              <p style={{ fontSize: 12.5, color: TEXT_DIM }}>Online Webinar · 2:00 PM</p>
+            </div>
+            <button className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-all" style={{ background: BRAND }}>Register</button>
           </div>
         </div>
       </div>
@@ -1672,93 +1875,94 @@ const StudentDashboard = () => {
 
   // ===== SETTINGS =====
   function renderSettings() {
+    const updateSetting = (key, value) => {
+      const updated = { ...notificationSettings, [key]: value };
+      setNotificationSettings(updated);
+      localStorage.setItem('notificationSettings', JSON.stringify(updated));
+    };
+
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
+      <div className="rounded-2xl p-6" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-[#F5831F]/10 rounded-xl flex items-center justify-center">
-            <Settings className="w-5 h-5 text-[#F5831F]" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,131,31,0.10)' }}>
+            <Settings className="w-5 h-5" style={{ color: BRAND }} />
           </div>
           <div>
-            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Settings</h2>
-            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Manage your notification preferences</p>
+            <h2 className="font-bold" style={{ fontSize: 18, color: isDarkMode ? '#fff' : '#1A1005' }}>Settings</h2>
+            <p style={{ fontSize: 12.5, color: TEXT_DIM }}>Manage your notification preferences</p>
           </div>
         </div>
 
         <div className="space-y-4">
           {/* Email Notifications */}
-          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'} border rounded-xl transition`}>
+          <div className="flex items-center justify-between p-4 rounded-xl transition" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#F5831F]/10 flex items-center justify-center flex-shrink-0">
-                <Mail className="w-5 h-5 text-[#F5831F]" />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(245,131,31,0.10)' }}>
+                <Mail className="w-5 h-5" style={{ color: BRAND }} />
               </div>
               <div>
-                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Email Notifications</h3>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <h3 className="font-medium" style={{ fontSize: 13.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Email Notifications</h3>
+                <p style={{ fontSize: 12, color: TEXT_DIM }}>
                   Receive email notifications when admin sends you a message
                 </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${notificationSettings.emailNotifications ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {notificationSettings.emailNotifications ? '✅ On' : '❌ Off'}
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span
+                    className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: notificationSettings.emailNotifications ? '#DCFCE7' : (isDarkMode ? '#2A2218' : '#F0EEE9'), color: notificationSettings.emailNotifications ? '#15803D' : TEXT_DIM }}
+                  >
+                    {notificationSettings.emailNotifications ? 'On' : 'Off'}
                   </span>
                   {notificationSettings.emailNotifications && (
-                    <span className="text-xs text-green-600 flex items-center gap-1">
+                    <span className="flex items-center gap-1" style={{ fontSize: 11, color: '#16A34A' }}>
                       <CheckCircle className="w-3 h-3" /> You'll receive email alerts
                     </span>
                   )}
                 </div>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
               <input
                 type="checkbox"
                 checked={notificationSettings.emailNotifications}
                 onChange={(e) => {
-                  setNotificationSettings({
-                    ...notificationSettings,
-                    emailNotifications: e.target.checked
-                  });
-                  localStorage.setItem('notificationSettings', JSON.stringify({
-                    ...notificationSettings,
-                    emailNotifications: e.target.checked
-                  }));
-                  setProfileMessage(e.target.checked ? '✅ Email notifications enabled' : '❌ Email notifications disabled');
+                  updateSetting('emailNotifications', e.target.checked);
+                  setProfileMessage(e.target.checked ? 'Email notifications enabled' : 'Email notifications disabled');
                   setTimeout(() => setProfileMessage(''), 3000);
                 }}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F5831F] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F5831F]"></div>
+              <div
+                className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                style={{ background: notificationSettings.emailNotifications ? BRAND : (isDarkMode ? '#2A2218' : '#E5E7EB') }}
+              />
             </label>
           </div>
 
           {/* Push Notifications */}
-          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'} border rounded-xl transition`}>
+          <div className="flex items-center justify-between p-4 rounded-xl transition" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#6366F1]/10 flex items-center justify-center flex-shrink-0">
-                <Bell className="w-5 h-5 text-[#6366F1]" />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,102,241,0.10)' }}>
+                <Bell className="w-5 h-5" style={{ color: '#6366F1' }} />
               </div>
               <div>
-                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Push Notifications</h3>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <h3 className="font-medium" style={{ fontSize: 13.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Push Notifications</h3>
+                <p style={{ fontSize: 12, color: TEXT_DIM }}>
                   Receive browser notifications for new messages
                 </p>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${notificationSettings.pushNotifications ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {notificationSettings.pushNotifications ? '✅ On' : '❌ Off'}
+                <span
+                  className="inline-block mt-1.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: notificationSettings.pushNotifications ? '#DCFCE7' : (isDarkMode ? '#2A2218' : '#F0EEE9'), color: notificationSettings.pushNotifications ? '#15803D' : TEXT_DIM }}
+                >
+                  {notificationSettings.pushNotifications ? 'On' : 'Off'}
                 </span>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
               <input
                 type="checkbox"
                 checked={notificationSettings.pushNotifications}
                 onChange={(e) => {
-                  setNotificationSettings({
-                    ...notificationSettings,
-                    pushNotifications: e.target.checked
-                  });
-                  localStorage.setItem('notificationSettings', JSON.stringify({
-                    ...notificationSettings,
-                    pushNotifications: e.target.checked
-                  }));
+                  updateSetting('pushNotifications', e.target.checked);
                   if (e.target.checked && !('Notification' in window)) {
                     alert('Push notifications are not supported in this browser.');
                   } else if (e.target.checked) {
@@ -1767,71 +1971,88 @@ const StudentDashboard = () => {
                 }}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F5831F] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6366F1]"></div>
+              <div
+                className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                style={{ background: notificationSettings.pushNotifications ? '#6366F1' : (isDarkMode ? '#2A2218' : '#E5E7EB') }}
+              />
             </label>
           </div>
 
           {/* Message Preview */}
-          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'} border rounded-xl transition`}>
+          <div className="flex items-center justify-between p-4 rounded-xl transition" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center flex-shrink-0">
-                <MessageSquare className="w-5 h-5 text-[#10B981]" />
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.10)' }}>
+                <MessageSquare className="w-5 h-5" style={{ color: '#10B981' }} />
               </div>
               <div>
-                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Message Preview</h3>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <h3 className="font-medium" style={{ fontSize: 13.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Message Preview</h3>
+                <p style={{ fontSize: 12, color: TEXT_DIM }}>
                   Show message preview in email notifications
                 </p>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${notificationSettings.messagePreview ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {notificationSettings.messagePreview ? '✅ On' : '❌ Off'}
+                <span
+                  className="inline-block mt-1.5 text-[10.5px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: notificationSettings.messagePreview ? '#DCFCE7' : (isDarkMode ? '#2A2218' : '#F0EEE9'), color: notificationSettings.messagePreview ? '#15803D' : TEXT_DIM }}
+                >
+                  {notificationSettings.messagePreview ? 'On' : 'Off'}
                 </span>
               </div>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
               <input
                 type="checkbox"
                 checked={notificationSettings.messagePreview}
-                onChange={(e) => {
-                  setNotificationSettings({
-                    ...notificationSettings,
-                    messagePreview: e.target.checked
-                  });
-                  localStorage.setItem('notificationSettings', JSON.stringify({
-                    ...notificationSettings,
-                    messagePreview: e.target.checked
-                  }));
-                }}
+                onChange={(e) => updateSetting('messagePreview', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F5831F] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#10B981]"></div>
+              <div
+                className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                style={{ background: notificationSettings.messagePreview ? '#10B981' : (isDarkMode ? '#2A2218' : '#E5E7EB') }}
+              />
             </label>
           </div>
 
-          {/* Notification Summary */}
-          <div className={`p-4 ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'} border rounded-xl`}>
-            <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-[#F5831F]" />
-              <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Notification Summary</span>
+          {/* Dark Mode */}
+          <div className="flex items-center justify-between p-4 rounded-xl transition" style={{ border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: isDarkMode ? 'rgba(245,131,31,0.10)' : '#F7F5F1' }}>
+                <span style={{ fontSize: 16 }}>{isDarkMode ? '🌙' : '☀️'}</span>
+              </div>
+              <div>
+                <h3 className="font-medium" style={{ fontSize: 13.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Dark Mode</h3>
+                <p style={{ fontSize: 12, color: TEXT_DIM }}>Switch between light and dark theme</p>
+              </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 mt-3">
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {notificationSettings.emailNotifications ? '✅' : '❌'}
-                </p>
-                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Email</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {notificationSettings.pushNotifications ? '✅' : '❌'}
-                </p>
-                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Push</p>
-              </div>
-              <div className="text-center">
-                <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {notificationSettings.messagePreview ? '✅' : '❌'}
-                </p>
-                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Preview</p>
-              </div>
+            <button
+              onClick={toggleDarkMode}
+              className="px-4 py-2 rounded-lg font-semibold transition-all flex-shrink-0"
+              style={{ fontSize: 12.5, background: isDarkMode ? BRAND : (isDarkMode ? '#2A2218' : '#F0EEE9'), color: isDarkMode ? '#fff' : '#374151' }}
+            >
+              {isDarkMode ? 'On' : 'Off'}
+            </button>
+          </div>
+
+          {/* Notification Summary */}
+          <div className="p-4 rounded-xl" style={{ background: isDarkMode ? '#242019' : '#F7F5F1', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="w-4.5 h-4.5" style={{ width: 18, height: 18, color: BRAND }} />
+              <span className="font-semibold" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>Notification Summary</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { label: 'Email', on: notificationSettings.emailNotifications },
+                { label: 'Push', on: notificationSettings.pushNotifications },
+                { label: 'Preview', on: notificationSettings.messagePreview },
+              ].map(item => (
+                <div key={item.label} className="text-center">
+                  <div
+                    className="w-8 h-8 mx-auto mb-1.5 rounded-full flex items-center justify-center"
+                    style={{ background: item.on ? '#DCFCE7' : (isDarkMode ? '#2A2218' : '#F0EEE9') }}
+                  >
+                    {item.on ? <CheckCircle style={{ width: 16, height: 16, color: '#16A34A' }} /> : <X style={{ width: 16, height: 16, color: TEXT_DIM }} />}
+                  </div>
+                  <p style={{ fontSize: 11, color: TEXT_DIM }}>{item.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

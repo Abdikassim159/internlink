@@ -18,7 +18,7 @@ class User(db.Model):
     token_created_at = db.Column(db.DateTime)
     verified_at = db.Column(db.DateTime)
     
-    # ===== OTP FIELDS =====
+    # OTP fields
     otp_code = db.Column(db.String(6))
     otp_created_at = db.Column(db.DateTime)
     otp_expires_at = db.Column(db.DateTime)
@@ -27,6 +27,7 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Relationships
     student_profile = db.relationship('StudentProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     employer_profile = db.relationship('EmployerProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     applications = db.relationship('Application', backref='student', lazy=True, cascade='all, delete-orphan')
@@ -226,6 +227,10 @@ class SavedOpportunity(db.Model):
     student_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     opportunity_id = db.Column(db.Integer, db.ForeignKey('opportunities.id'), nullable=False)
     saved_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # ===== RELATIONSHIPS =====
+    student = db.relationship('User', foreign_keys=[student_id], backref='saved_opportunities')
+    opportunity = db.relationship('Opportunity', foreign_keys=[opportunity_id], backref='saved_by')
     
     __table_args__ = (db.UniqueConstraint('student_id', 'opportunity_id', name='unique_saved'),)
 

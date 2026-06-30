@@ -14,9 +14,9 @@ from email.mime.multipart import MIMEMultipart
 
 auth_bp = Blueprint('auth', __name__)
 
-# ===== EMAIL CONFIGURATION =====
+
 def send_otp_email(to_email, otp_code, full_name):
-    """Send OTP verification email"""
+    """Send OTP verification email to student"""
     try:
         config = {
             'host': os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
@@ -85,7 +85,7 @@ def generate_otp():
     return ''.join(random.choices(string.digits, k=6))
 
 
-# ===== REGISTER - FIXED ENDPOINT =====
+# ===== REGISTER STUDENT =====
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
@@ -97,23 +97,41 @@ def register():
         password = data.get('password')
         role = data.get('role', 'student')
         
-        # Validate
         if not full_name or not email or not password:
             return jsonify({'error': 'All fields are required'}), 400
         
-        # Check existing user
         existing = User.query.filter_by(email=email).first()
         if existing:
             return jsonify({'error': 'Email already registered'}), 400
         
-        # Hash password
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         
-        # Generate OTP
+        # ===== ADMIN: Directly verified (no OTP needed) =====
+        if role == 'admin':
+            user = User(
+                full_name=full_name,
+                email=email,
+                password=hashed.decode('utf-8'),
+                role='admin',
+                is_verified=True,  # Admin is auto-verified
+                verified_at=datetime.utcnow()
+            )
+            db.session.add(user)
+            db.session.commit()
+            
+            access_token = create_access_token(identity=user.id)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Admin account created successfully!',
+                'access_token': access_token,
+                'user': user.to_dict()
+            }), 201
+        
+        # ===== STUDENT: Needs OTP verification =====
         otp_code = generate_otp()
         otp_expires = datetime.utcnow() + timedelta(minutes=10)
         
-        # Create user
         user = User(
             full_name=full_name,
             email=email,
@@ -130,16 +148,14 @@ def register():
         db.session.flush()
         
         # Create student profile
-        if role == 'student':
-            student_profile = StudentProfile(
-                user_id=user.id,
-                full_name=full_name,
-                course='Not set',
-                university='Not set',
-                year_of_study=1
-            )
-            db.session.add(student_profile)
-        
+        student_profile = StudentProfile(
+            user_id=user.id,
+            full_name=full_name,
+            course='Not set',
+            university='Not set',
+            year_of_study=1
+        )
+        db.session.add(student_profile)
         db.session.commit()
         
         # Send OTP email
@@ -161,7 +177,7 @@ def register():
         return jsonify({'error': str(e)}), 500
 
 
-# ===== VERIFY OTP =====
+# ===== VERIFY OTP (Student Only) =====
 @auth_bp.route('/verify-otp', methods=['POST'])
 def verify_otp():
     try:
@@ -175,6 +191,10 @@ def verify_otp():
         user = User.query.filter_by(email=email).first()
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        # Admin doesn't need verification
+        if user.role == 'admin':
+            return jsonify({'error': 'Admin account is already verified'}), 400
         
         if user.is_verified:
             return jsonify({'error': 'Account already verified'}), 400
@@ -217,7 +237,7 @@ def verify_otp():
         return jsonify({'error': str(e)}), 500
 
 
-# ===== RESEND OTP =====
+# ===== RESEND OTP (Student Only) =====
 @auth_bp.route('/resend-otp', methods=['POST'])
 def resend_otp():
     try:
@@ -230,6 +250,9 @@ def resend_otp():
         user = User.query.filter_by(email=email).first()
         if not user:
             return jsonify({'error': 'User not found'}), 404
+        
+        if user.role == 'admin':
+            return jsonify({'error': 'Admin account does not need OTP'}), 400
         
         if user.is_verified:
             return jsonify({'error': 'Account already verified'}), 400
@@ -271,15 +294,26 @@ def login():
         if not user:
             return jsonify({'error': 'Invalid credentials'}), 401
         
+        # Check password
+        if not bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # ===== ADMIN: Bypass OTP verification =====
+        if user.role == 'admin':
+            access_token = create_access_token(identity=user.id)
+            return jsonify({
+                'success': True,
+                'access_token': access_token,
+                'user': user.to_dict()
+            }), 200
+        
+        # ===== STUDENT: Must be verified =====
         if not user.is_verified:
             return jsonify({
                 'error': 'Account not verified. Please check your email for OTP.',
                 'requires_verification': True,
                 'email': user.email
             }), 401
-        
-        if not bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-            return jsonify({'error': 'Invalid credentials'}), 401
         
         access_token = create_access_token(identity=user.id)
         

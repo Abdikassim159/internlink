@@ -11,15 +11,21 @@ def get_saved_opportunities():
     """Get all saved opportunities for current user"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"🔵 Getting saved opportunities for user: {current_user_id}")
         
-        saved = SavedOpportunity.query.filter_by(
+        # Get all saved records for this student
+        saved_records = SavedOpportunity.query.filter_by(
             student_id=current_user_id
         ).order_by(SavedOpportunity.saved_at.desc()).all()
         
+        print(f"🔵 Found {len(saved_records)} saved records")
+        
         result = []
-        for item in saved:
-            if item.opportunity:
-                opp = item.opportunity
+        for saved in saved_records:
+            # Get the opportunity directly from the database using opportunity_id
+            opp = Opportunity.query.get(saved.opportunity_id)
+            
+            if opp:
                 result.append({
                     'id': opp.id,
                     'title': opp.title,
@@ -28,8 +34,10 @@ def get_saved_opportunities():
                     'location': opp.location,
                     'stipend': opp.stipend,
                     'deadline': opp.deadline.isoformat() if opp.deadline else None,
-                    'saved_at': item.saved_at.isoformat() if item.saved_at else None
+                    'saved_at': saved.saved_at.isoformat() if saved.saved_at else None
                 })
+            else:
+                print(f"⚠️ Opportunity {saved.opportunity_id} not found")
         
         return jsonify({
             'saved': result,
@@ -37,7 +45,9 @@ def get_saved_opportunities():
         }), 200
         
     except Exception as e:
-        print(f"Error fetching saved: {str(e)}")
+        print(f"🔴 Error fetching saved: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -47,10 +57,12 @@ def save_opportunity(opportunity_id):
     """Save an opportunity"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"🔵 Saving opportunity {opportunity_id} for user {current_user_id}")
         
         # Check if opportunity exists
         opportunity = Opportunity.query.get(opportunity_id)
         if not opportunity:
+            print(f"🔴 Opportunity {opportunity_id} not found")
             return jsonify({'error': 'Opportunity not found'}), 404
         
         # Check if already saved
@@ -60,6 +72,7 @@ def save_opportunity(opportunity_id):
         ).first()
         
         if existing:
+            print(f"🔵 Already saved")
             return jsonify({'message': 'Already saved', 'saved': True}), 200
         
         # Create saved record
@@ -71,13 +84,16 @@ def save_opportunity(opportunity_id):
         db.session.add(saved)
         db.session.commit()
         
+        print(f"✅ Saved opportunity {opportunity_id}")
         return jsonify({
             'message': 'Opportunity saved successfully',
             'saved': True
         }), 201
         
     except Exception as e:
-        print(f"Error saving: {str(e)}")
+        print(f"🔴 Error saving: {str(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
@@ -88,6 +104,7 @@ def unsave_opportunity(opportunity_id):
     """Remove a saved opportunity"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"🔵 Unsaving opportunity {opportunity_id} for user {current_user_id}")
         
         saved = SavedOpportunity.query.filter_by(
             student_id=current_user_id,
@@ -95,18 +112,22 @@ def unsave_opportunity(opportunity_id):
         ).first()
         
         if not saved:
+            print(f"🔴 Opportunity {opportunity_id} not saved")
             return jsonify({'error': 'Opportunity not saved'}), 404
         
         db.session.delete(saved)
         db.session.commit()
         
+        print(f"✅ Unsaved opportunity {opportunity_id}")
         return jsonify({
             'message': 'Opportunity removed from saved',
             'saved': False
         }), 200
         
     except Exception as e:
-        print(f"Error unsaving: {str(e)}")
+        print(f"🔴 Error unsaving: {str(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
@@ -117,14 +138,19 @@ def check_saved(opportunity_id):
     """Check if an opportunity is saved by current user"""
     try:
         current_user_id = get_jwt_identity()
+        print(f"🔵 Checking if opportunity {opportunity_id} is saved by user {current_user_id}")
         
         saved = SavedOpportunity.query.filter_by(
             student_id=current_user_id,
             opportunity_id=opportunity_id
         ).first()
         
-        return jsonify({'saved': saved is not None}), 200
+        is_saved = saved is not None
+        print(f"🔵 Is saved: {is_saved}")
+        return jsonify({'saved': is_saved}), 200
         
     except Exception as e:
-        print(f"Error checking saved: {str(e)}")
+        print(f"🔴 Error checking saved: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
