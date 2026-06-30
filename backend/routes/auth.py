@@ -1,318 +1,315 @@
+# routes/auth.py
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from models import db, User
-from utils.email import generate_verification_token, verify_token, send_verification_email
+from models import db, User, StudentProfile
+from datetime import datetime, timedelta
 import bcrypt
-import re
-from datetime import datetime
+import random
+import string
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 auth_bp = Blueprint('auth', __name__)
 
+# ===== EMAIL CONFIGURATION =====
+def send_otp_email(to_email, otp_code, full_name):
+    """Send OTP verification email"""
+    try:
+        config = {
+            'host': os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
+            'port': int(os.getenv('MAIL_PORT', 587)),
+            'username': os.getenv('MAIL_USERNAME'),
+            'password': os.getenv('MAIL_PASSWORD'),
+            'from_email': os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME')),
+            'use_tls': os.getenv('MAIL_USE_TLS', 'True') == 'True'
+        }
+        
+        if not config['username'] or not config['password']:
+            print("⚠️ Email not configured")
+            return False
+        
+        msg = MIMEMultipart()
+        msg['From'] = config['from_email']
+        msg['To'] = to_email
+        msg['Subject'] = "[InternLink] Your OTP Verification Code"
+        
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px;">
+            <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h1 style="color: #8B6B4A; margin: 0;">InternLink</h1>
+                    <p style="color: #888; margin: 5px 0;">Linking Talent, Building Futures</p>
+                </div>
+                <div style="text-align: center; padding: 20px; background: #f8f4f0; border-radius: 8px; border: 2px dashed #8B6B4A;">
+                    <p style="margin: 0 0 10px; color: #666; font-size: 14px;">Your Verification Code</p>
+                    <div style="background: white; padding: 15px; border-radius: 8px; display: inline-block;">
+                        <span style="font-size: 32px; font-weight: 800; color: #8B6B4A; letter-spacing: 8px; font-family: monospace;">{otp_code}</span>
+                    </div>
+                    <p style="margin: 10px 0 0; color: #888; font-size: 13px;">⏰ Expires in 10 minutes</p>
+                </div>
+                <p style="color: #888; font-size: 12px; text-align: center; margin-top: 20px;">
+                    This is an automated message from InternLink.
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        server = smtplib.SMTP(config['host'], config['port'])
+        server.ehlo()
+        if config['use_tls']:
+            server.starttls()
+            server.ehlo()
+        server.login(config['username'], config['password'])
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ OTP email sent to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error sending OTP email: {str(e)}")
+        return False
+
+
+def generate_otp():
+    """Generate 6-digit OTP"""
+    return ''.join(random.choices(string.digits, k=6))
+
+
+# ===== REGISTER - FIXED ENDPOINT =====
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Register a new user"""
     try:
         data = request.get_json()
         print(f"📝 Registration data: {data}")
         
-        # Validate email
+        full_name = data.get('fullName', data.get('full_name', ''))
         email = data.get('email')
-        if not email:
-            return jsonify({'error': 'Email is required'}), 400
-        
-        # Validate email format
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            return jsonify({'error': 'Please enter a valid email address'}), 400
-        
-        # Check if user exists
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
-            if existing_user.is_verified:
-                return jsonify({'error': 'Email already registered'}), 400
-            else:
-                db.session.delete(existing_user)
-                db.session.commit()
-                print(f"🗑️ Deleted unverified user: {email}")
-        
-        # Get role
+        password = data.get('password')
         role = data.get('role', 'student')
         
-        # Get full name
-        full_name = data.get('fullName', '').strip()
-        if not full_name:
-            full_name = 'User'
+        # Validate
+        if not full_name or not email or not password:
+            return jsonify({'error': 'All fields are required'}), 400
         
-        # Validate password
-        password = data.get('password')
-        if not password or len(password) < 6:
-            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+        # Check existing user
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            return jsonify({'error': 'Email already registered'}), 400
         
         # Hash password
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        hashed_password_str = hashed_password.decode('utf-8')
-        print(f"🔑 Password hashed for: {email}")
+        hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         
-        # Generate verification token
-        token = generate_verification_token(email)
+        # Generate OTP
+        otp_code = generate_otp()
+        otp_expires = datetime.utcnow() + timedelta(minutes=10)
         
-        # Create user based on role
-        if role == 'admin':
-            user = User(
+        # Create user
+        user = User(
+            full_name=full_name,
+            email=email,
+            password=hashed.decode('utf-8'),
+            role=role,
+            is_verified=False,
+            otp_code=otp_code,
+            otp_created_at=datetime.utcnow(),
+            otp_expires_at=otp_expires,
+            otp_attempts=0
+        )
+        
+        db.session.add(user)
+        db.session.flush()
+        
+        # Create student profile
+        if role == 'student':
+            student_profile = StudentProfile(
+                user_id=user.id,
                 full_name=full_name,
-                email=email,
-                password=hashed_password_str,
-                role=role,
-                is_verified=True,
-                verification_token=token,
-                token_created_at=datetime.utcnow(),
-                verified_at=datetime.utcnow()
+                course='Not set',
+                university='Not set',
+                year_of_study=1
             )
-            
-            db.session.add(user)
-            db.session.commit()
-            print(f"✅ Admin created: {email}")
-            
-            return jsonify({
-                'message': 'Admin account created successfully! You can login now.',
-                'user': user.to_dict(),
-                'requires_verification': False
-            }), 201
+            db.session.add(student_profile)
         
-        else:
-            user = User(
-                full_name=full_name,
-                email=email,
-                password=hashed_password_str,
-                role=role,
-                is_verified=False,
-                verification_token=token,
-                token_created_at=datetime.utcnow()
-            )
-            
-            db.session.add(user)
-            db.session.commit()
-            print(f"✅ User created: {email} (unverified)")
-            
-            # Send verification email
-            try:
-                send_verification_email(email, full_name, token)
-                print(f"📧 Verification email sent to {email}")
-            except Exception as e:
-                print(f"⚠️ Email send failed: {str(e)}")
-            
-            return jsonify({
-                'message': 'Account created! Please check your email to verify your account.',
-                'user': user.to_dict(),
-                'requires_verification': True
-            }), 201
+        db.session.commit()
+        
+        # Send OTP email
+        email_sent = send_otp_email(email, otp_code, full_name)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Registration successful! Check your email for OTP.',
+            'email_sent': email_sent,
+            'user_id': user.id,
+            'requires_verification': True
+        }), 201
         
     except Exception as e:
         print(f"❌ Registration error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
-        return jsonify({'error': 'Registration failed. Please try again.'}), 500
+        return jsonify({'error': str(e)}), 500
 
 
-@auth_bp.route('/verify-email/<token>', methods=['GET'])
-def verify_email(token):
-    """Verify user email with token"""
+# ===== VERIFY OTP =====
+@auth_bp.route('/verify-otp', methods=['POST'])
+def verify_otp():
     try:
-        print(f"🔐 Verifying email with token: {token[:20]}...")
+        data = request.get_json()
+        email = data.get('email')
+        otp_code = data.get('otp_code')
         
-        email = verify_token(token)
-        if not email:
-            print("❌ Invalid or expired token")
-            return jsonify({'error': 'Invalid or expired verification link'}), 400
-        
-        print(f"📧 Token belongs to: {email}")
+        if not email or not otp_code:
+            return jsonify({'error': 'Email and OTP are required'}), 400
         
         user = User.query.filter_by(email=email).first()
         if not user:
-            print(f"❌ User not found: {email}")
             return jsonify({'error': 'User not found'}), 404
         
         if user.is_verified:
-            print(f"✅ User already verified: {email}")
-            return jsonify({'message': 'Email already verified. You can now login.'}), 200
+            return jsonify({'error': 'Account already verified'}), 400
         
+        # Check expiration
+        if user.otp_expires_at and user.otp_expires_at < datetime.utcnow():
+            return jsonify({'error': 'OTP expired. Please request a new one.'}), 400
+        
+        # Check attempts
+        if user.otp_attempts >= 5:
+            return jsonify({'error': 'Too many failed attempts. Request a new OTP.'}), 400
+        
+        # Verify OTP
+        if user.otp_code != otp_code:
+            user.otp_attempts += 1
+            db.session.commit()
+            remaining = 5 - user.otp_attempts
+            return jsonify({'error': f'Invalid OTP. {remaining} attempts remaining.'}), 400
+        
+        # Success
         user.is_verified = True
-        user.verification_token = None
         user.verified_at = datetime.utcnow()
+        user.otp_code = None
+        user.otp_expires_at = None
+        user.otp_attempts = 0
         db.session.commit()
         
-        print(f"✅ User verified successfully: {email}")
+        access_token = create_access_token(identity=user.id)
         
         return jsonify({
-            'message': 'Email verified successfully! You can now login.',
-            'verified': True
+            'success': True,
+            'message': 'Account verified successfully!',
+            'access_token': access_token,
+            'user': user.to_dict()
         }), 200
         
     except Exception as e:
-        print(f"❌ Verification error: {str(e)}")
-        return jsonify({'error': 'Verification failed. Please try again.'}), 500
+        print(f"❌ Verify OTP error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 
+# ===== RESEND OTP =====
+@auth_bp.route('/resend-otp', methods=['POST'])
+def resend_otp():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if user.is_verified:
+            return jsonify({'error': 'Account already verified'}), 400
+        
+        # Generate new OTP
+        otp_code = generate_otp()
+        user.otp_code = otp_code
+        user.otp_created_at = datetime.utcnow()
+        user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
+        user.otp_attempts = 0
+        db.session.commit()
+        
+        email_sent = send_otp_email(email, otp_code, user.full_name)
+        
+        return jsonify({
+            'success': True,
+            'message': 'New OTP sent to your email.',
+            'email_sent': email_sent
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Resend OTP error: {str(e)}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== LOGIN =====
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Login user"""
     try:
         data = request.get_json()
         email = data.get('email')
         password = data.get('password')
         
-        print(f"🔑 Login attempt: {email}")
-        print(f"📝 Password length: {len(password) if password else 0}")
-        
         if not email or not password:
-            return jsonify({'error': 'Email and password required'}), 400
+            return jsonify({'error': 'Email and password are required'}), 400
         
-        # Find user
         user = User.query.filter_by(email=email).first()
         if not user:
-            print(f"❌ User not found: {email}")
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        print(f"✅ User found: {user.email}")
-        print(f"   Role: {user.role}")
-        print(f"   Verified: {user.is_verified}")
-        print(f"   Password hash: {user.password[:30]}...")
-        
-        # Check password
-        try:
-            password_match = bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8'))
-            print(f"🔑 Password match: {password_match}")
-        except Exception as e:
-            print(f"❌ Password check error: {str(e)}")
-            return jsonify({'error': 'Invalid credentials'}), 401
-        
-        if not password_match:
-            print(f"❌ Password does not match for: {email}")
-            return jsonify({'error': 'Invalid credentials'}), 401
-        
-        # Check verification for students
-        if user.role != 'admin' and not user.is_verified:
-            print(f"⚠️ User not verified: {email}")
+        if not user.is_verified:
             return jsonify({
-                'error': 'Please verify your email before logging in.',
+                'error': 'Account not verified. Please check your email for OTP.',
                 'requires_verification': True,
                 'email': user.email
-            }), 403
+            }), 401
         
-        # Create token
+        if not bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
         access_token = create_access_token(identity=user.id)
-        print(f"✅ Login successful: {email}")
         
         return jsonify({
-            'message': 'Login successful',
+            'success': True,
             'access_token': access_token,
             'user': user.to_dict()
         }), 200
         
     except Exception as e:
         print(f"❌ Login error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': 'Login failed. Please try again.'}), 500
+        return jsonify({'error': str(e)}), 500
 
 
-@auth_bp.route('/resend-verification', methods=['POST'])
-def resend_verification():
-    """Resend verification email"""
+# ===== GET CURRENT USER =====
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
     try:
-        data = request.get_json()
-        email = data.get('email')
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
         
-        if not email:
-            return jsonify({'error': 'Email is required'}), 400
-        
-        user = User.query.filter_by(email=email).first()
         if not user:
             return jsonify({'error': 'User not found'}), 404
-        
-        if user.is_verified:
-            return jsonify({'message': 'Email already verified. You can login.'}), 200
-        
-        token = generate_verification_token(email)
-        user.verification_token = token
-        user.token_created_at = datetime.utcnow()
-        db.session.commit()
-        
-        send_verification_email(email, user.full_name, token)
         
         return jsonify({
-            'message': 'Verification email sent! Please check your inbox.'
-        }), 200
-        
-    except Exception as e:
-        print(f"Resend verification error: {str(e)}")
-        return jsonify({'error': 'Failed to send verification email'}), 500
-
-
-@auth_bp.route('/profile', methods=['GET'])
-@jwt_required()
-def get_profile():
-    """Get current user profile"""
-    try:
-        current_user_id = get_jwt_identity()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        return jsonify(user.to_dict()), 200
-        
-    except Exception as e:
-        print(f"Profile error: {str(e)}")
-        return jsonify({'error': 'Failed to fetch profile'}), 500
-
-
-@auth_bp.route('/profile', methods=['PUT'])
-@jwt_required()
-def update_profile():
-    """Update user profile"""
-    try:
-        current_user_id = get_jwt_identity()
-        data = request.get_json()
-        user = User.query.get(current_user_id)
-        
-        if not user:
-            return jsonify({'error': 'User not found'}), 404
-        
-        if 'full_name' in data:
-            user.full_name = data['full_name']
-        if 'email' in data:
-            user.email = data['email']
-        
-        db.session.commit()
-        
-        return jsonify({
-            'message': 'Profile updated successfully',
+            'success': True,
             'user': user.to_dict()
         }), 200
         
     except Exception as e:
-        print(f"Update profile error: {str(e)}")
-        db.session.rollback()
-        return jsonify({'error': 'Failed to update profile'}), 500
-
-
-@auth_bp.route('/users', methods=['GET'])
-@jwt_required()
-def get_all_users():
-    """Get all users (Admin only)"""
-    try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        
-        if not current_user or current_user.role != 'admin':
-            return jsonify({'error': 'Permission denied'}), 403
-        
-        users = User.query.all()
-        return jsonify({
-            'users': [user.to_dict() for user in users],
-            'total': len(users)
-        }), 200
-        
-    except Exception as e:
-        print(f"Users error: {str(e)}")
-        return jsonify({'error': 'Failed to fetch users'}), 500
+        print(f"❌ Get user error: {str(e)}")
+        return jsonify({'error': str(e)}), 500

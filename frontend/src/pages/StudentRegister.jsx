@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { User, Mail, Lock, ShieldCheck, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, ShieldCheck, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, CheckCircle2, Key, Clock } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -11,6 +11,7 @@ const DARK_BG   = '#1C1209';
 const TEXT_DIM  = '#A08060';
 
 const StudentRegister = () => {
+  const [step, setStep] = useState('register'); // 'register' or 'verify'
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -18,13 +19,19 @@ const StudentRegister = () => {
     confirmPassword: '',
     role: 'student'
   });
+  const [otp, setOtp] = useState('');
+  const [userId, setUserId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [timer, setTimer] = useState(120);
+  const [canResend, setCanResend] = useState(false);
+  const [resending, setResending] = useState(false);
   const navigate = useNavigate();
 
+  // ===== HANDLE REGISTER =====
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -50,6 +57,7 @@ const StudentRegister = () => {
     }
 
     try {
+      // ✅ FIXED: Changed from /auth/student-register to /auth/register
       const response = await axios.post(`${API_URL}/auth/register`, {
         fullName: formData.fullName,
         email: formData.email,
@@ -57,31 +65,432 @@ const StudentRegister = () => {
         role: formData.role
       });
 
-      setSuccess(`Account created successfully! We've sent a verification email to ${formData.email}. Please check your inbox (and spam folder).`);
-
+      setUserId(response.data.user_id);
+      setSuccess('✅ Registration successful! Please check your email for the OTP code.');
+      
       setTimeout(() => {
-        navigate('/student-login');
-      }, 5000);
+        setStep('verify');
+        startTimer();
+      }, 1000);
+
     } catch (error) {
+      console.error('Registration error:', error);
       setError(error.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  // ===== START TIMER =====
+  const startTimer = () => {
+    setTimer(120);
+    setCanResend(false);
+    const countdown = setInterval(() => {
+      setTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(countdown);
+          setCanResend(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // ===== HANDLE OTP VERIFICATION =====
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    
+    if (otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // ✅ FIXED: Correct endpoint
+      const response = await axios.post(`${API_URL}/auth/verify-otp`, {
+        email: formData.email,
+        otp_code: otp
+      });
+
+      setSuccess('✅ Account verified successfully!');
+      
+      localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      setTimeout(() => {
+        navigate('/student/dashboard');
+      }, 1500);
+
+    } catch (err) {
+      console.error('OTP verification error:', err);
+      setError(err.response?.data?.error || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===== HANDLE RESEND OTP =====
+  const handleResendOTP = async () => {
+    setResending(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // ✅ FIXED: Correct endpoint
+      const response = await axios.post(`${API_URL}/auth/resend-otp`, {
+        email: formData.email
+      });
+
+      setSuccess('✅ New OTP sent to your email!');
+      startTimer();
+
+    } catch (err) {
+      console.error('Resend OTP error:', err);
+      setError(err.response?.data?.error || 'Failed to resend OTP');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // ===== GO BACK TO REGISTER =====
+  const handleBackToRegister = () => {
+    setStep('register');
+    setError('');
+    setSuccess('');
+  };
+
+  // ===== FORMAT TIME =====
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // ============================================================
+  // RENDER OTP VERIFICATION
+  // ============================================================
+  if (step === 'verify') {
+    return (
+      <div
+        className="min-h-screen flex"
+        style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif" }}
+      >
+        {/* LEFT — Branding panel */}
+        <div
+          className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-center items-center text-center p-12"
+          style={{ background: `linear-gradient(160deg, ${DARK_BG} 0%, #2A1C0F 100%)` }}
+        >
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: -80, left: -60, width: 320, height: 320, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(245,131,31,0.18) 0%, transparent 70%)',
+            }}
+          />
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              bottom: -100, right: -60, width: 360, height: 360, borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(212,162,74,0.14) 0%, transparent 70%)',
+            }}
+          />
+
+          <div className="relative z-10 flex items-center gap-3 mb-12">
+            <div
+              className="flex items-center justify-center rounded-2xl flex-shrink-0"
+              style={{
+                width: 52, height: 52,
+                background: '#2C1A07',
+                boxShadow: '0 0 0 1.5px rgba(245,131,31,0.35)',
+              }}
+            >
+              <img
+                src="/logo.jpeg"
+                alt="Intern Link"
+                className="w-full h-full object-contain rounded-2xl"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML =
+                    `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px;">🎓</div>`;
+                }}
+              />
+            </div>
+            <div className="text-left">
+              <p
+                className="font-bold text-white text-2xl leading-none"
+                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+              >
+                Intern <span style={{ color: BRAND }}>Link</span>
+              </p>
+              <p className="text-[11px] mt-1 tracking-[0.12em] uppercase" style={{ color: TEXT_DIM }}>
+                Student Portal
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-10 mb-10">
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: 200, height: 200,
+                background: 'linear-gradient(145deg, rgba(245,131,31,0.12), rgba(212,162,74,0.08))',
+                border: '1px solid rgba(245,131,31,0.18)',
+              }}
+            >
+              <Key style={{ width: 80, height: 80, color: BRAND }} />
+            </div>
+          </div>
+
+          <div className="relative z-10 max-w-sm">
+            <h2
+              className="text-white mb-4"
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: '2.1rem',
+                fontWeight: 800,
+                letterSpacing: '-0.01em',
+                lineHeight: 1.2,
+              }}
+            >
+              Verify Your Account
+            </h2>
+            <p style={{ fontSize: '14px', color: TEXT_DIM, lineHeight: 1.7 }}>
+              Enter the 6-digit code sent to your email address to complete registration.
+            </p>
+          </div>
+
+          <div className="relative z-10 flex items-center gap-6 mt-10">
+            {[
+              { value: '10K+', label: 'Students' },
+              { value: '500+', label: 'Companies' },
+              { value: '95%',  label: 'Satisfaction' },
+            ].map((s, i) => (
+              <div key={i} className="text-center">
+                <p
+                  className="font-bold text-white"
+                  style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '1.1rem' }}
+                >
+                  {s.value}
+                </p>
+                <p style={{ fontSize: '10.5px', color: TEXT_DIM }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* RIGHT — OTP Verification Form */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10 bg-white">
+          <div className="max-w-md w-full">
+
+            {/* Mobile logo */}
+            <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+              <div
+                className="flex items-center justify-center rounded-xl flex-shrink-0"
+                style={{ width: 40, height: 40, background: DARK_BG, boxShadow: '0 0 0 1.5px rgba(245,131,31,0.35)' }}
+              >
+                <img
+                  src="/logo.jpeg"
+                  alt="Intern Link"
+                  className="w-full h-full object-contain rounded-xl"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML =
+                      `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;">🎓</div>`;
+                  }}
+                />
+              </div>
+              <p className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                Intern <span style={{ color: BRAND }}>Link</span>
+              </p>
+            </div>
+
+            {/* Heading */}
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: BRAND }} />
+                <span
+                  className="text-xs font-semibold tracking-[0.14em] uppercase"
+                  style={{ color: BRAND }}
+                >
+                  Verify Email
+                </span>
+              </div>
+              <h2
+                className="text-[#0D0D0D] mb-2"
+                style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: 'clamp(1.6rem, 2.6vw, 2rem)',
+                  fontWeight: 800,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Check Your Email
+              </h2>
+              <p className="text-[#6B7280]" style={{ fontSize: '13.5px' }}>
+                We've sent a 6-digit verification code to <strong>{formData.email}</strong>
+              </p>
+            </div>
+
+            {/* Alerts */}
+            {error && (
+              <div
+                className="flex items-start gap-3 p-3.5 mb-6 rounded-xl text-sm"
+                style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}
+              >
+                <AlertCircle className="w-4.5 h-4.5 flex-shrink-0 mt-0.5" style={{ width: 18, height: 18 }} />
+                <span style={{ fontSize: '13px' }}>{error}</span>
+              </div>
+            )}
+
+            {success && (
+              <div
+                className="flex items-start gap-3 p-3.5 mb-6 rounded-xl text-sm"
+                style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D' }}
+              >
+                <CheckCircle2 className="w-4.5 h-4.5 flex-shrink-0 mt-0.5" style={{ width: 18, height: 18 }} />
+                <span style={{ fontSize: '13px' }}>{success}</span>
+              </div>
+            )}
+
+            {/* Timer */}
+            <div className="flex items-center justify-center gap-2 mb-6 text-sm text-gray-500">
+              <Clock style={{ width: 16, height: 16 }} />
+              <span>Code expires in: </span>
+              <span className="font-bold" style={{ color: BRAND }}>
+                {formatTime(timer)}
+              </span>
+            </div>
+
+            {/* OTP Form */}
+            <form onSubmit={handleVerifyOTP} className="space-y-5">
+              <div>
+                <label className="block font-medium text-[#374151] mb-1.5" style={{ fontSize: '13px' }}>
+                  Enter OTP Code <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <div className="relative">
+                  <Key
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ width: 17, height: 17, color: '#9CA3AF' }}
+                  />
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition-all text-center text-2xl tracking-[8px] font-bold"
+                    style={{
+                      fontSize: '20px',
+                      border: '1.5px solid #E5E7EB',
+                      background: '#FAFAF9',
+                      letterSpacing: '8px',
+                    }}
+                    placeholder="000000"
+                    maxLength="6"
+                    onFocus={e => { e.target.style.borderColor = BRAND; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 3px rgba(245,131,31,0.10)`; }}
+                    onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.background = '#FAFAF9'; e.target.style.boxShadow = 'none'; }}
+                    required
+                  />
+                </div>
+                <p className="text-[#9CA3AF] mt-1.5" style={{ fontSize: '11px' }}>
+                  Enter the 6-digit code from your email
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2.5 font-semibold text-white transition-all"
+                style={{
+                  background: loading ? '#C49050' : BRAND,
+                  fontSize: '14px',
+                  padding: '13.5px 24px',
+                  borderRadius: 12,
+                  boxShadow: '0 6px 18px rgba(245,131,31,0.28)',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#3D2A18'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(61,42,24,0.38)'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
+                onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = BRAND; e.currentTarget.style.boxShadow = '0 6px 18px rgba(245,131,31,0.28)'; e.currentTarget.style.transform = 'translateY(0)'; } }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" style={{ width: 18, height: 18 }} />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    Verify Account
+                    <span
+                      className="flex items-center justify-center rounded-full"
+                      style={{ width: 22, height: 22, background: 'rgba(255,255,255,0.18)' }}
+                    >
+                      <ArrowRight style={{ width: 12, height: 12 }} />
+                    </span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Resend OTP */}
+            <div className="mt-6 text-center">
+              <p className="text-[#6B7280]" style={{ fontSize: '13px' }}>
+                Didn't receive the code?{' '}
+                <button
+                  onClick={handleResendOTP}
+                  disabled={resending || !canResend}
+                  className="font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ color: BRAND }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#3D2A18')}
+                  onMouseLeave={e => (e.currentTarget.style.color = BRAND)}
+                >
+                  {resending ? (
+                    <>
+                      <Loader2 className="animate-spin inline" style={{ width: 14, height: 14 }} />
+                      Sending...
+                    </>
+                  ) : (
+                    'Resend OTP'
+                  )}
+                </button>
+              </p>
+              {!canResend && timer > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Please wait {formatTime(timer)} before resending
+                </p>
+              )}
+            </div>
+
+            {/* Back to Login */}
+            <div className="mt-4 text-center">
+              <button
+                onClick={handleBackToRegister}
+                className="text-sm text-gray-500 hover:text-gray-700 transition"
+              >
+                ← Back to Registration
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // RENDER REGISTER FORM
+  // ============================================================
   return (
     <div
       className="min-h-screen flex"
       style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif" }}
     >
-      {/* ══════════════════════════════════════════════
-          LEFT — Branding panel (dark, matches Navbar/Footer)
-      ══════════════════════════════════════════════ */}
+      {/* LEFT — Branding panel */}
       <div
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-center items-center text-center p-12"
         style={{ background: `linear-gradient(160deg, ${DARK_BG} 0%, #2A1C0F 100%)` }}
       >
-        {/* Decorative warm glows */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -96,7 +505,6 @@ const StudentRegister = () => {
             background: 'radial-gradient(circle, rgba(212,162,74,0.14) 0%, transparent 70%)',
           }}
         />
-        {/* Subtle dot-grid world map texture */}
         <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 500 600" preserveAspectRatio="xMidYMid slice">
           {Array.from({ length: 90 }).map((_, i) => (
             <circle
@@ -109,7 +517,6 @@ const StudentRegister = () => {
           ))}
         </svg>
 
-        {/* Logo */}
         <div className="relative z-10 flex items-center gap-3 mb-12">
           <div
             className="flex items-center justify-center rounded-2xl flex-shrink-0"
@@ -143,7 +550,6 @@ const StudentRegister = () => {
           </div>
         </div>
 
-        {/* Illustration */}
         <div className="relative z-10 mb-10">
           <div
             className="flex items-center justify-center rounded-full"
@@ -162,7 +568,6 @@ const StudentRegister = () => {
           </div>
         </div>
 
-        {/* Headline */}
         <div className="relative z-10 max-w-sm">
           <h2
             className="text-white mb-4"
@@ -181,7 +586,6 @@ const StudentRegister = () => {
           </p>
         </div>
 
-        {/* Trust strip */}
         <div className="relative z-10 flex items-center gap-6 mt-10">
           {[
             { value: '10K+', label: 'Students' },
@@ -201,9 +605,7 @@ const StudentRegister = () => {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════════
-          RIGHT — Register form
-      ══════════════════════════════════════════════ */}
+      {/* RIGHT — Register form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10 bg-white">
         <div className="max-w-md w-full">
 
@@ -335,7 +737,7 @@ const StudentRegister = () => {
                 />
               </div>
               <p className="text-[#9CA3AF] mt-1.5" style={{ fontSize: '11px' }}>
-                We'll send a verification link to this email
+                We'll send a verification OTP to this email
               </p>
             </div>
 

@@ -1,4 +1,3 @@
-
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
@@ -18,6 +17,12 @@ class User(db.Model):
     verification_token = db.Column(db.String(100), unique=True)
     token_created_at = db.Column(db.DateTime)
     verified_at = db.Column(db.DateTime)
+    
+    # ===== OTP FIELDS =====
+    otp_code = db.Column(db.String(6))
+    otp_created_at = db.Column(db.DateTime)
+    otp_expires_at = db.Column(db.DateTime)
+    otp_attempts = db.Column(db.Integer, default=0)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -224,8 +229,6 @@ class SavedOpportunity(db.Model):
     
     __table_args__ = (db.UniqueConstraint('student_id', 'opportunity_id', name='unique_saved'),)
 
-
-    # models.py - Add this class
 
 class Message(db.Model):
     __tablename__ = 'messages'

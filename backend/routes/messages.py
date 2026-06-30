@@ -15,22 +15,22 @@ messages_bp = Blueprint('messages', __name__)
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 
-# ===== EMAIL CONFIGURATION =====
-def get_email_config():
-    """Get email configuration from environment variables"""
-    return {
-        'host': os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
-        'port': int(os.getenv('MAIL_PORT', 587)),
-        'username': os.getenv('MAIL_USERNAME'),
-        'password': os.getenv('MAIL_PASSWORD'),
-        'from_email': os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME')),
-        'use_tls': os.getenv('MAIL_USE_TLS', 'True') == 'True'
-    }
+# Get frontend URL from environment
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
-def send_email(to_email, subject, body, is_important=False):
-    """Send email notification to student"""
+
+def send_email(to_email, subject, body, is_important=False, include_preview=True):
+    """Send professional email notification to student"""
     try:
-        config = get_email_config()
+        # Get email config
+        config = {
+            'host': os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
+            'port': int(os.getenv('MAIL_PORT', 587)),
+            'username': os.getenv('MAIL_USERNAME'),
+            'password': os.getenv('MAIL_PASSWORD'),
+            'from_email': os.getenv('MAIL_DEFAULT_SENDER', os.getenv('MAIL_USERNAME')),
+            'use_tls': os.getenv('MAIL_USE_TLS', 'True') == 'True'
+        }
         
         # Check if email is configured
         if not config['username'] or not config['password']:
@@ -39,7 +39,6 @@ def send_email(to_email, subject, body, is_important=False):
         
         print(f"📧 Sending email to: {to_email}")
         print(f"📧 Subject: {subject}")
-        print(f"📧 From: {config['from_email']}")
         
         # Create message
         msg = MIMEMultipart()
@@ -47,9 +46,25 @@ def send_email(to_email, subject, body, is_important=False):
         msg['To'] = to_email
         msg['Subject'] = f"[InternLink] {subject}"
         
-        # Create HTML email body
+        # Build preview section
+        if include_preview:
+            preview_text = body[:300] + '...' if len(body) > 300 else body
+            preview_section = f"""
+            <div style="background: #f8f8f8; padding: 20px; border-radius: 8px; border-left: 4px solid {'#e74c3c' if is_important else '#8B6B4A'}; margin: 15px 0;">
+                <p style="margin: 0; color: #333; font-size: 15px; white-space: pre-wrap; line-height: 1.8;">{preview_text}</p>
+            </div>
+            """
+        else:
+            preview_section = f"""
+            <div style="background: #f8f8f8; padding: 20px; border-radius: 8px; border-left: 4px solid {'#e74c3c' if is_important else '#8B6B4A'}; margin: 15px 0;">
+                <p style="margin: 0; color: #666; font-size: 15px; font-style: italic;">
+                    📩 You have a new message from the InternLink Admin.
+                </p>
+            </div>
+            """
+        
         importance_badge = "🔴 IMPORTANT" if is_important else "📩 New Message"
-        importance_class = "important" if is_important else ""
+        importance_color = '#e74c3c' if is_important else '#8B6B4A'
         
         html_body = f"""
         <!DOCTYPE html>
@@ -59,53 +74,125 @@ def send_email(to_email, subject, body, is_important=False):
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>InternLink Message</title>
         </head>
-        <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; margin: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-                
-                <!-- Header -->
-                <div style="background: linear-gradient(135deg, #8B6B4A 0%, #6D4F33 100%); color: white; padding: 30px 25px; text-align: center;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                        <div style="width: 40px; height: 40px; background: white; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: #8B6B4A; font-weight: bold; font-size: 20px;">in</span>
-                        </div>
-                        <h1 style="margin: 0; font-size: 24px; font-weight: 700;">InternLink</h1>
-                    </div>
-                    <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">Linking Talent, Building Futures</p>
-                </div>
-                
-                <!-- Content -->
-                <div style="padding: 30px 25px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                        <h2 style="margin: 0; color: #1a1a1a; font-size: 22px;">{subject}</h2>
-                        <span style="display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; background: {'#e74c3c' if is_important else '#8B6B4A'}; color: white;">
-                            {importance_badge}
-                        </span>
-                    </div>
-                    
-                    <p style="color: #555; margin-bottom: 10px; font-size: 15px;">Hello,</p>
-                    <p style="color: #555; margin-bottom: 15px; font-size: 15px;">You have received a new message from the InternLink Admin:</p>
-                    
-                    <div style="background: #f8f8f8; padding: 20px; border-radius: 8px; border-left: 4px solid {'#e74c3c' if is_important else '#8B6B4A'}; margin: 15px 0; {'background: #fff5f5' if is_important else ''}">
-                        <p style="margin: 0; white-space: pre-wrap; color: #333; font-size: 15px; line-height: 1.6;">{body}</p>
-                    </div>
-                    
-                    <p style="color: #555; margin-top: 20px; font-size: 15px;">
-                        Please log in to your <strong>InternLink Dashboard</strong> to read and reply to this message.
-                    </p>
-                    
-                    <div style="text-align: center; margin: 25px 0;">
-                        <a href="http://localhost:5173/student/dashboard" style="display: inline-block; background: #8B6B4A; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; transition: background 0.3s;">
-                            Go to Dashboard →
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Footer -->
-                <div style="background: #f8f8f8; text-align: center; padding: 20px; border-top: 1px solid #eee;">
-                    <p style="margin: 0; color: #888; font-size: 12px;">© 2026 InternLink by FutureSpace. All rights reserved.</p>
-                    <p style="margin: 5px 0 0; color: #aaa; font-size: 11px;">Linking Talent, Building Futures.</p>
-                </div>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f0f0f0; padding: 0; margin: 0; -webkit-font-smoothing: antialiased;">
+            
+            <!-- MAIN CONTAINER -->
+            <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.08);">
+                <tr>
+                    <td style="padding: 0;">
+                        
+                        <!-- ===== HEADER ===== -->
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #8B6B4A 0%, #6D4F33 100%);">
+                            <tr>
+                                <td style="padding: 35px 30px 30px; text-align: center;">
+                                    <!-- Logo -->
+                                    <table align="center" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="background: white; border-radius: 12px; padding: 8px 12px;">
+                                                <span style="font-size: 22px; font-weight: 800; color: #8B6B4A; letter-spacing: -0.5px;">InternLink</span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    <p style="margin: 10px 0 0; color: rgba(255,255,255,0.85); font-size: 13px; letter-spacing: 1.5px; font-weight: 300;">
+                                        LINKING TALENT, BUILDING FUTURES
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <!-- ===== CONTENT ===== -->
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="padding: 35px 30px;">
+                                    
+                                    <!-- Subject & Badge -->
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="padding-bottom: 5px;">
+                                                <span style="display: inline-block; background: {importance_color}; color: white; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; padding: 4px 14px; border-radius: 20px;">
+                                                    {importance_badge}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <h2 style="margin: 10px 0 0; color: #1a1a1a; font-size: 22px; font-weight: 700; letter-spacing: -0.3px; line-height: 1.3;">
+                                                    {subject}
+                                                </h2>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                    <!-- Divider -->
+                                    <div style="height: 1px; background: #e8e8e8; margin: 20px 0;"></div>
+                                    
+                                    <!-- Greeting -->
+                                    <p style="color: #444; font-size: 15px; line-height: 1.8; margin: 0 0 15px;">
+                                        Dear Student,
+                                    </p>
+                                    
+                                    <p style="color: #444; font-size: 15px; line-height: 1.8; margin: 0 0 15px;">
+                                        You have received a new message from the InternLink Admin Team:
+                                    </p>
+                                    
+                                    <!-- Message Box -->
+                                    {preview_section}
+                                    
+                                    <!-- Instructions -->
+                                    <p style="color: #555; font-size: 14px; line-height: 1.8; margin: 20px 0 10px;">
+                                        To view the full message and reply, please log in to your InternLink dashboard.
+                                    </p>
+                                    
+                                    <p style="color: #888; font-size: 13px; line-height: 1.8; margin: 5px 0 0; font-style: italic;">
+                                        💡 Tip: You can view all your messages in the "Messages" section of your dashboard.
+                                    </p>
+                                    
+                                    <!-- Divider -->
+                                    <div style="height: 1px; background: #e8e8e8; margin: 25px 0;"></div>
+                                    
+                                    <!-- Footer Info -->
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="text-align: center;">
+                                                <p style="margin: 0; color: #999; font-size: 12px; line-height: 1.6;">
+                                                    This is an automated notification from <strong>InternLink</strong>.
+                                                </p>
+                                                <p style="margin: 5px 0 0; color: #bbb; font-size: 11px; line-height: 1.6;">
+                                                    If you have any questions, please contact your institution's admin.
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    
+                                </td>
+                            </tr>
+                        </table>
+                        
+                        <!-- ===== FOOTER ===== -->
+                        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f8f8;">
+                            <tr>
+                                <td style="padding: 25px 30px; text-align: center;">
+                                    <p style="margin: 0; color: #aaa; font-size: 12px; line-height: 1.6;">
+                                        &copy; 2026 <strong style="color: #8B6B4A;">InternLink</strong> by FutureSpace.
+                                        <br>
+                                        Linking Talent, Building Futures.
+                                    </p>
+                                    <p style="margin: 8px 0 0; color: #ccc; font-size: 10px;">
+                                        This email was sent to <a href="mailto:{to_email}" style="color: #8B6B4A; text-decoration: none;">{to_email}</a>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                        
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- Mobile note -->
+            <div style="max-width: 600px; margin: 15px auto 0; text-align: center; font-size: 11px; color: #bbb; padding: 0 15px;">
+                <p style="margin: 0;">View this email in your browser for the best experience.</p>
             </div>
+            
         </body>
         </html>
         """
@@ -113,13 +200,17 @@ def send_email(to_email, subject, body, is_important=False):
         msg.attach(MIMEText(html_body, 'html'))
         
         # Send email
+        print("🔄 Connecting to SMTP server...")
         server = smtplib.SMTP(config['host'], config['port'])
         server.ehlo()
         if config['use_tls']:
             server.starttls()
             server.ehlo()
         
+        print("🔄 Logging in...")
         server.login(config['username'], config['password'])
+        
+        print("🔄 Sending email...")
         server.send_message(msg)
         server.quit()
         
@@ -165,7 +256,10 @@ def get_messages():
         user_id = get_jwt_identity()
         user = User.query.get(user_id)
         
-        if user and user.role == 'admin':
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if user.role == 'admin':
             messages = Message.query.filter_by(
                 sender_id=user_id
             ).order_by(Message.created_at.desc()).all()
@@ -314,7 +408,7 @@ def delete_message(message_id):
         return jsonify({'error': str(e)}), 500
 
 
-# ===== ADMIN: SEND MESSAGE (WITH EMAIL) =====
+# ===== ADMIN: SEND MESSAGE =====
 @messages_bp.route('/messages/send', methods=['POST'])
 @jwt_required()
 def send_message():
@@ -356,6 +450,8 @@ def send_message():
         db.session.add(message)
         db.session.commit()
         
+        print(f"✅ Message saved to database with ID: {message.id}")
+        
         # ===== SEND EMAIL NOTIFICATION =====
         email_sent = False
         if send_email_notification and student.email:
@@ -364,7 +460,8 @@ def send_message():
                     to_email=student.email,
                     subject=subject or 'New Message from Admin',
                     body=message_text,
-                    is_important=is_important
+                    is_important=is_important,
+                    include_preview=True
                 )
                 print(f"📧 Email notification: {'✅ Sent' if email_sent else '❌ Failed'}")
             except Exception as e:
@@ -385,8 +482,10 @@ def send_message():
         }), 201
         
     except Exception as e:
-        print(f"Error sending message: {str(e)}")
+        print(f"❌ Error sending message: {str(e)}")
         db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -398,7 +497,7 @@ def get_all_students():
         sender_id = get_jwt_identity()
         sender = User.query.get(sender_id)
         
-        if sender.role != 'admin':
+        if not sender or sender.role != 'admin':
             return jsonify({'error': 'Unauthorized'}), 403
         
         students = User.query.filter_by(role='student').all()
