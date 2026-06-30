@@ -1,9 +1,14 @@
-
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, ShieldCheck, BadgeCheck, Lock as LockIcon, ShieldAlert } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
+
+// Brand palette — shared with Navbar / Hero / Footer / StudentLogin / StudentRegister
+const BRAND     = '#F5831F';
+const DARK_BG   = '#1C1209';
+const TEXT_DIM  = '#A08060';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +16,7 @@ const AdminLogin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -28,14 +34,14 @@ const AdminLogin = () => {
 
       // Check if user is admin
       if (response.data.user.role !== 'admin') {
-        setError('❌ Access denied. Admin privileges required.');
+        setError('Access denied. Admin privileges required.');
         setLoading(false);
         return;
       }
 
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
+
       console.log('Admin logged in:', response.data.user);
       navigate('/admin');
     } catch (error) {
@@ -47,182 +53,330 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Branding & Image */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 to-blue-800 relative overflow-hidden">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-80 h-80 bg-blue-300/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-2xl"></div>
+    <div
+      className="min-h-screen flex"
+      style={{ fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif" }}
+    >
+      {/* ══════════════════════════════════════════════
+          LEFT — Branding panel (darker, more restrained
+          than student pages, to signal elevated/admin access)
+      ══════════════════════════════════════════════ */}
+      <div
+        className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-center items-center text-center p-12"
+        style={{ background: `linear-gradient(160deg, #100A05 0%, ${DARK_BG} 100%)` }}
+      >
+        {/* Decorative glows — cooler/dimmer than student pages for an "admin" tone */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: -80, left: -60, width: 320, height: 320, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(212,162,74,0.12) 0%, transparent 70%)',
+          }}
+        />
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            bottom: -100, right: -60, width: 360, height: 360, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(245,131,31,0.10) 0%, transparent 70%)',
+          }}
+        />
+        {/* Subtle dot-grid texture */}
+        <svg className="absolute inset-0 w-full h-full opacity-[0.05]" viewBox="0 0 500 600" preserveAspectRatio="xMidYMid slice">
+          {Array.from({ length: 90 }).map((_, i) => (
+            <circle key={i} cx={(i % 10) * 56 + 20} cy={Math.floor(i / 10) * 56 + 20} r="1.6" fill="#D4A24A" />
+          ))}
+        </svg>
 
-        <div className="relative z-10 flex flex-col justify-center items-center text-white p-12 text-center">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-sm px-6 py-3 rounded-2xl">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-                <span className="text-blue-900 font-bold text-2xl">in</span>
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-2xl">InternLink</p>
-                <p className="text-blue-200 text-sm">Admin Portal</p>
-              </div>
-            </div>
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-3 mb-10">
+          <div
+            className="flex items-center justify-center rounded-2xl flex-shrink-0"
+            style={{ width: 52, height: 52, background: '#2C1A07', boxShadow: '0 0 0 1.5px rgba(212,162,74,0.4)' }}
+          >
+            <img
+              src="/logo.jpeg"
+              alt="Intern Link"
+              className="w-full h-full object-contain rounded-2xl"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML =
+                  `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px;">🎓</div>`;
+              }}
+            />
           </div>
-
-          <div className="mb-8">
-            <svg className="w-64 h-64 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={0.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-
-          <div className="max-w-sm">
-            <h2 className="text-3xl font-bold mb-4">Welcome Back, Admin</h2>
-            <p className="text-blue-200 text-lg leading-relaxed">
-              Manage your platform, review applications, and oversee all opportunities from one central dashboard.
+          <div className="text-left">
+            <p
+              className="font-bold text-white text-2xl leading-none"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              Intern <span style={{ color: '#D4A24A' }}>Link</span>
+            </p>
+            <p className="text-[11px] mt-1 tracking-[0.12em] uppercase" style={{ color: TEXT_DIM }}>
+              Admin Portal
             </p>
           </div>
+        </div>
 
-          <div className="absolute bottom-8 text-blue-300 text-sm">
-            <p>🔒 Secure Admin Access • InternLink 2026</p>
+        {/* Illustration — shield mark for admin/security tone */}
+        <div className="relative z-10 mb-9">
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: 190, height: 190,
+              background: 'linear-gradient(145deg, rgba(212,162,74,0.10), rgba(245,131,31,0.06))',
+              border: '1px solid rgba(212,162,74,0.2)',
+            }}
+          >
+            <svg viewBox="0 0 64 64" width="84" height="84" fill="none">
+              <path
+                d="M32 8L52 15V29C52 41 43.5 50 32 56C20.5 50 12 41 12 29V15L32 8Z"
+                stroke="#D4A24A" strokeWidth="2.2" strokeLinejoin="round"
+              />
+              <path d="M23 31l6 6 13-14" stroke="#D4A24A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
+        </div>
+
+        {/* Headline */}
+        <div className="relative z-10 max-w-sm">
+          <h2
+            className="text-white mb-4"
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: '2.1rem',
+              fontWeight: 800,
+              letterSpacing: '-0.01em',
+              lineHeight: 1.2,
+            }}
+          >
+            Welcome Back, Admin
+          </h2>
+          <p style={{ fontSize: '14px', color: TEXT_DIM, lineHeight: 1.7 }}>
+            Manage your platform, review applications, and oversee all opportunities from one central dashboard.
+          </p>
+        </div>
+
+        {/* Secure access footer note */}
+        <div className="relative z-10 flex items-center gap-2 mt-12" style={{ color: TEXT_DIM }}>
+          <ShieldCheck style={{ width: 14, height: 14 }} />
+          <span style={{ fontSize: '11.5px', letterSpacing: '0.02em' }}>
+            Secure Admin Access · Internlink {new Date().getFullYear()}
+          </span>
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
+      {/* ══════════════════════════════════════════════
+          RIGHT — Admin login form
+      ══════════════════════════════════════════════ */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10 bg-white">
         <div className="max-w-md w-full">
-          {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center gap-3 bg-blue-50 px-6 py-3 rounded-2xl">
-              <div className="w-10 h-10 bg-blue-900 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-xl">in</span>
-              </div>
-              <div className="text-left">
-                <p className="font-bold text-xl text-gray-900">InternLink</p>
-                <p className="text-blue-600 text-sm">Admin Portal</p>
-              </div>
+
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
+            <div
+              className="flex items-center justify-center rounded-xl flex-shrink-0"
+              style={{ width: 40, height: 40, background: DARK_BG, boxShadow: '0 0 0 1.5px rgba(212,162,74,0.4)' }}
+            >
+              <img
+                src="/logo.jpeg"
+                alt="Intern Link"
+                className="w-full h-full object-contain rounded-xl"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentElement.innerHTML =
+                    `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;">🎓</div>`;
+                }}
+              />
             </div>
+            <p className="font-bold text-lg" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+              Intern <span style={{ color: '#D4A24A' }}>Link</span>
+            </p>
           </div>
 
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Admin Login</h2>
-            <p className="text-gray-500 text-sm mt-2">Access the admin dashboard</p>
+          {/* Heading */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldAlert style={{ width: 14, height: 14, color: '#D4A24A' }} />
+              <span
+                className="text-xs font-semibold tracking-[0.14em] uppercase"
+                style={{ color: '#D4A24A' }}
+              >
+                Restricted Access
+              </span>
+            </div>
+            <h2
+              className="text-[#0D0D0D] mb-2"
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: 'clamp(1.6rem, 2.6vw, 2rem)',
+                fontWeight: 800,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Admin Login
+            </h2>
+            <p className="text-[#6B7280]" style={{ fontSize: '13.5px' }}>
+              Access the admin dashboard to manage Internlink.
+            </p>
           </div>
 
+          {/* Error alert */}
           {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm mb-6 flex items-center gap-3 border border-red-100">
-              <span className="text-xl">⚠️</span>
-              <span>{error}</span>
+            <div
+              className="flex items-start gap-3 p-3.5 mb-6 rounded-xl text-sm"
+              style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}
+            >
+              <AlertCircle style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: '13px' }}>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block font-medium text-[#374151] mb-1.5" style={{ fontSize: '13px' }}>
                 Email Address
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                  </svg>
-                </div>
+                <Mail
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ width: 17, height: 17, color: '#9CA3AF' }}
+                />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-100 transition"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition-all"
+                  style={{ fontSize: '13.5px', border: '1.5px solid #E5E7EB', background: '#FAFAF9' }}
                   placeholder="admin@internlink.com"
+                  onFocus={e => { e.target.style.borderColor = '#D4A24A'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(212,162,74,0.12)'; }}
+                  onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.background = '#FAFAF9'; e.target.style.boxShadow = 'none'; }}
                   required
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block font-medium text-[#374151] mb-1.5" style={{ fontSize: '13px' }}>
                 Password
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
+                <Lock
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ width: 17, height: 17, color: '#9CA3AF' }}
+                />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-blue-900 focus:ring-2 focus:ring-blue-100 transition"
+                  className="w-full pl-10 pr-11 py-3 rounded-xl outline-none transition-all"
+                  style={{ fontSize: '13.5px', border: '1.5px solid #E5E7EB', background: '#FAFAF9' }}
                   placeholder="Enter your password"
+                  onFocus={e => { e.target.style.borderColor = '#D4A24A'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px rgba(212,162,74,0.12)'; }}
+                  onBlur={e => { e.target.style.borderColor = '#E5E7EB'; e.target.style.background = '#FAFAF9'; e.target.style.boxShadow = 'none'; }}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: '#9CA3AF' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#D4A24A')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#9CA3AF')}
                 >
-                  {showPassword ? (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  )}
+                  {showPassword ? <EyeOff style={{ width: 17, height: 17 }} /> : <Eye style={{ width: 17, height: 17 }} />}
                 </button>
               </div>
             </div>
 
+            {/* Remember me + Forgot password */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  className="w-4 h-4 text-blue-900 rounded border-gray-300 focus:ring-blue-900"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="cursor-pointer"
+                  style={{ width: 15, height: 15, accentColor: '#D4A24A' }}
                 />
-                <span className="text-sm text-gray-600">Remember me</span>
+                <span className="text-[#6B7280]" style={{ fontSize: '12.5px' }}>Remember me</span>
               </label>
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <Link
+                to="/forgot-password"
+                className="font-medium transition-colors"
+                style={{ fontSize: '12.5px', color: '#D4A24A' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#3D2A18')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#D4A24A')}
+              >
                 Forgot password?
               </Link>
             </div>
 
+            {/* Submit — darker, more "secure action" tone than student CTA */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-900 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-800 transition shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              className="w-full flex items-center justify-center gap-2.5 font-semibold text-white transition-all"
+              style={{
+                background: loading ? '#5A4530' : '#1C1209',
+                fontSize: '14px',
+                padding: '13.5px 24px',
+                borderRadius: 12,
+                boxShadow: '0 6px 18px rgba(28,18,9,0.3)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+              }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#D4A24A'; e.currentTarget.style.color = '#1C1209'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(212,162,74,0.4)'; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
+              onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = '#1C1209'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(28,18,9,0.3)'; e.currentTarget.style.transform = 'translateY(0)'; } }}
             >
               {loading ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+                  <Loader2 className="animate-spin" style={{ width: 18, height: 18 }} />
                   Signing in...
                 </>
               ) : (
                 <>
-                  <span>Sign In as Admin</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+                  Sign In as Admin
+                  <span
+                    className="flex items-center justify-center rounded-full"
+                    style={{ width: 22, height: 22, background: 'rgba(255,255,255,0.15)' }}
+                  >
+                    <ArrowRight style={{ width: 12, height: 12 }} />
+                  </span>
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-500">
+          {/* Return to student login */}
+          <div className="mt-7 text-center">
+            <p className="text-[#6B7280]" style={{ fontSize: '13px' }}>
               Return to{' '}
-              <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link
+                to="/student-login"
+                className="font-semibold transition-colors"
+                style={{ color: '#D4A24A' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#3D2A18')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#D4A24A')}
+              >
                 Student Login
               </Link>
             </p>
           </div>
 
-          <div className="mt-6 flex justify-center gap-6 text-xs text-gray-400">
-            <span className="flex items-center gap-1">🔒 256-bit SSL</span>
-            <span className="flex items-center gap-1">🛡️ Secure</span>
-            <span className="flex items-center gap-1">✅ Verified</span>
+          {/* Trust badges */}
+          <div className="mt-8 flex items-center justify-center gap-5">
+            <span className="flex items-center gap-1.5" style={{ fontSize: '11px', color: '#9CA3AF' }}>
+              <LockIcon style={{ width: 13, height: 13 }} /> 256-bit SSL
+            </span>
+            <span className="flex items-center gap-1.5" style={{ fontSize: '11px', color: '#9CA3AF' }}>
+              <ShieldCheck style={{ width: 13, height: 13 }} /> Secure
+            </span>
+            <span className="flex items-center gap-1.5" style={{ fontSize: '11px', color: '#9CA3AF' }}>
+              <BadgeCheck style={{ width: 13, height: 13 }} /> Verified
+            </span>
           </div>
         </div>
       </div>

@@ -86,7 +86,7 @@ const RoleBasedLayout = ({ children }) => {
         <main className="flex-grow">
           {children}
         </main>
-        <Footer />
+        
       </div>
     );
   }

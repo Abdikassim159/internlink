@@ -34,7 +34,8 @@ import {
   Phone,
   MapPin,
   BookOpen,
-  Trash2
+  Trash2,
+  Heart
 } from 'lucide-react';
 
 const API_URL = 'http://localhost:5000/api';
@@ -66,6 +67,13 @@ const StudentDashboard = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isMessageDetailOpen, setIsMessageDetailOpen] = useState(false);
+  
+  // ===== NOTIFICATION SETTINGS =====
+  const [notificationSettings, setNotificationSettings] = useState({
+    emailNotifications: true,
+    pushNotifications: true,
+    messagePreview: true
+  });
   
   const [stats, setStats] = useState({
     applied: 0,
@@ -108,6 +116,17 @@ const StudentDashboard = () => {
     try {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
+      
+      // Load notification settings
+      const savedSettings = localStorage.getItem('notificationSettings');
+      if (savedSettings) {
+        try {
+          setNotificationSettings(JSON.parse(savedSettings));
+        } catch (e) {
+          console.error('Error loading notification settings:', e);
+        }
+      }
+      
       loadAllData();
     } catch (e) {
       console.error('Error parsing user data:', e);
@@ -647,7 +666,7 @@ const StudentDashboard = () => {
                 onClick={() => handleTabClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                   isActive 
-                    ? 'bg-[#F5831F] text-white' 
+                    ? 'bg-[#F5831F] text-white font-medium' 
                     : 'text-gray-400 hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -906,6 +925,18 @@ const StudentDashboard = () => {
                   <span className="text-sm font-medium">Important Message</span>
                 </div>
               )}
+              
+              {/* Email Sent Indicator */}
+              <div className="flex items-center gap-3 mb-4 p-3 bg-green-50 rounded-xl border border-green-200">
+                <Mail className="w-4 h-4 text-green-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-700">Email Notification Sent</p>
+                  <p className="text-xs text-green-600">
+                    A copy of this message was sent to your email address
+                  </p>
+                </div>
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              </div>
               
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
@@ -1642,19 +1673,166 @@ const StudentDashboard = () => {
   // ===== SETTINGS =====
   function renderSettings() {
     return (
-      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-5`}>
-        <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Settings</h2>
+      <div className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} rounded-xl shadow-sm border p-6`}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-[#F5831F]/10 rounded-xl flex items-center justify-center">
+            <Settings className="w-5 h-5 text-[#F5831F]" />
+          </div>
+          <div>
+            <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Settings</h2>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Manage your notification preferences</p>
+          </div>
+        </div>
+
         <div className="space-y-4">
-          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} border rounded-lg`}>
-            <div><h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Email Notifications</h3><p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Receive email updates</p></div>
+          {/* Email Notifications */}
+          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'} border rounded-xl transition`}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#F5831F]/10 flex items-center justify-center flex-shrink-0">
+                <Mail className="w-5 h-5 text-[#F5831F]" />
+              </div>
+              <div>
+                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Email Notifications</h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Receive email notifications when admin sends you a message
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${notificationSettings.emailNotifications ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {notificationSettings.emailNotifications ? '✅ On' : '❌ Off'}
+                  </span>
+                  {notificationSettings.emailNotifications && (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> You'll receive email alerts
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
+              <input
+                type="checkbox"
+                checked={notificationSettings.emailNotifications}
+                onChange={(e) => {
+                  setNotificationSettings({
+                    ...notificationSettings,
+                    emailNotifications: e.target.checked
+                  });
+                  localStorage.setItem('notificationSettings', JSON.stringify({
+                    ...notificationSettings,
+                    emailNotifications: e.target.checked
+                  }));
+                  setProfileMessage(e.target.checked ? '✅ Email notifications enabled' : '❌ Email notifications disabled');
+                  setTimeout(() => setProfileMessage(''), 3000);
+                }}
+                className="sr-only peer"
+              />
               <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F5831F] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F5831F]"></div>
             </label>
           </div>
-          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-100'} border rounded-lg`}>
-            <div><h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Dark Mode</h3><p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Switch between light and dark</p></div>
-            <button onClick={toggleDarkMode} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700'}`}>{isDarkMode ? 'On' : 'Off'}</button>
+
+          {/* Push Notifications */}
+          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'} border rounded-xl transition`}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#6366F1]/10 flex items-center justify-center flex-shrink-0">
+                <Bell className="w-5 h-5 text-[#6366F1]" />
+              </div>
+              <div>
+                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Push Notifications</h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Receive browser notifications for new messages
+                </p>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${notificationSettings.pushNotifications ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {notificationSettings.pushNotifications ? '✅ On' : '❌ Off'}
+                </span>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notificationSettings.pushNotifications}
+                onChange={(e) => {
+                  setNotificationSettings({
+                    ...notificationSettings,
+                    pushNotifications: e.target.checked
+                  });
+                  localStorage.setItem('notificationSettings', JSON.stringify({
+                    ...notificationSettings,
+                    pushNotifications: e.target.checked
+                  }));
+                  if (e.target.checked && !('Notification' in window)) {
+                    alert('Push notifications are not supported in this browser.');
+                  } else if (e.target.checked) {
+                    Notification.requestPermission();
+                  }
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F5831F] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#6366F1]"></div>
+            </label>
+          </div>
+
+          {/* Message Preview */}
+          <div className={`flex items-center justify-between p-4 ${isDarkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-100 hover:bg-gray-50'} border rounded-xl transition`}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#10B981]/10 flex items-center justify-center flex-shrink-0">
+                <MessageSquare className="w-5 h-5 text-[#10B981]" />
+              </div>
+              <div>
+                <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Message Preview</h3>
+                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  Show message preview in email notifications
+                </p>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${notificationSettings.messagePreview ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {notificationSettings.messagePreview ? '✅ On' : '❌ Off'}
+                </span>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notificationSettings.messagePreview}
+                onChange={(e) => {
+                  setNotificationSettings({
+                    ...notificationSettings,
+                    messagePreview: e.target.checked
+                  });
+                  localStorage.setItem('notificationSettings', JSON.stringify({
+                    ...notificationSettings,
+                    messagePreview: e.target.checked
+                  }));
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#F5831F] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#10B981]"></div>
+            </label>
+          </div>
+
+          {/* Notification Summary */}
+          <div className={`p-4 ${isDarkMode ? 'bg-gray-700/50 border-gray-600' : 'bg-gray-50 border-gray-200'} border rounded-xl`}>
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-[#F5831F]" />
+              <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Notification Summary</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4 mt-3">
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {notificationSettings.emailNotifications ? '✅' : '❌'}
+                </p>
+                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Email</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {notificationSettings.pushNotifications ? '✅' : '❌'}
+                </p>
+                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Push</p>
+              </div>
+              <div className="text-center">
+                <p className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {notificationSettings.messagePreview ? '✅' : '❌'}
+                </p>
+                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Preview</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

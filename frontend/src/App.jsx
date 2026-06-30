@@ -16,6 +16,9 @@ import AdminLogin from './pages/AdminLogin';
 import StudentLogin from './pages/StudentLogin';
 import StudentRegister from './pages/StudentRegister';
 import VerifyEmail from './pages/VerifyEmail';
+import HowItWorks from './assets/components/HowItWorks';
+import HowItWorksHero from './assets/components/HowItWorksHero';
+import HowItWorksPage from './pages/HowItWorksPage';
 
 function App() {
   return (
@@ -23,6 +26,7 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
+        <Route path="how-it-works" element={<HowItWorksPage />} />
         <Route path="/opportunities" element={<FindOpportunities />} />
         <Route path="/opportunity/:id" element={<OpportunityDetails />} />
         <Route path="/companies" element={<Companies />} />
