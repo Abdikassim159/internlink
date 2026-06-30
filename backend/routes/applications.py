@@ -1,10 +1,34 @@
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Application, Opportunity, User
 from datetime import datetime
 
 applications_bp = Blueprint('applications', __name__)
+
+
+def time_ago(dt):
+    """Convert datetime to 'time ago' string"""
+    if not dt:
+        return 'Just now'
+    
+    now = datetime.utcnow()
+    diff = now - dt
+    
+    if diff.days > 0:
+        if diff.days == 1:
+            return 'Yesterday'
+        return f'{diff.days} days ago'
+    
+    seconds = diff.seconds
+    if seconds < 60:
+        return 'Just now'
+    if seconds < 3600:
+        minutes = seconds // 60
+        return f'{minutes}m ago'
+    
+    hours = seconds // 3600
+    return f'{hours}h ago'
+
 
 @applications_bp.route('/applications', methods=['POST'])
 @jwt_required()
@@ -14,8 +38,8 @@ def submit_application():
         current_user_id = get_jwt_identity()
         data = request.get_json()
         
-        print(f"Received application data: {data}")
-        print(f"User ID: {current_user_id}")
+        print(f"🔵 Received application data: {data}")
+        print(f"🔵 User ID: {current_user_id}")
         
         # Validate required fields
         required_fields = ['opportunity_id', 'full_name', 'email', 'phone']
@@ -56,7 +80,7 @@ def submit_application():
         db.session.add(application)
         db.session.commit()
         
-        print(f"Application created with ID: {application.id}")
+        print(f"✅ Application created with ID: {application.id}")
         
         return jsonify({
             'message': 'Application submitted successfully',
@@ -65,7 +89,9 @@ def submit_application():
         }), 201
         
     except Exception as e:
-        print(f"Error submitting application: {str(e)}")
+        print(f"🔴 Error submitting application: {str(e)}")
+        import traceback
+        traceback.print_exc()
         db.session.rollback()
         return jsonify({'error': 'Failed to submit application'}), 500
 
@@ -85,44 +111,6 @@ def get_all_applications():
         
         result = []
         for app in applications:
-            app_dict = app.to_dict()
-            # ✅ Include full opportunity data
-            if app.opportunity:
-                app_dict['opportunity'] = {
-                    'id': app.opportunity.id,
-                    'title': app.opportunity.title,
-                    'company_name': app.opportunity.company_name,
-                    'type': app.opportunity.type,
-                    'location': app.opportunity.location
-                }
-            result.append(app_dict)
-        
-        return jsonify({
-            'applications': result,
-            'total': len(result)
-        }), 200
-        
-    except Exception as e:
-        print(f"Error fetching applications: {str(e)}")
-        return jsonify({'error': 'Failed to fetch applications'}), 500
-
-
-@applications_bp.route('/applications/my', methods=['GET'])
-@jwt_required()
-def get_my_applications():
-    """Get current user's applications with full opportunity data"""
-    try:
-        current_user_id = get_jwt_identity()
-        
-        print(f"Fetching applications for user: {current_user_id}")
-        
-        applications = Application.query.filter_by(
-            student_id=current_user_id
-        ).order_by(Application.applied_at.desc()).all()
-        
-        result = []
-        for app in applications:
-            # ✅ Convert application to dict
             app_dict = {
                 'id': app.id,
                 'student_id': app.student_id,
@@ -140,10 +128,73 @@ def get_my_applications():
                 'match_score': app.match_score,
                 'admin_notes': app.admin_notes,
                 'applied_at': app.applied_at.isoformat() if app.applied_at else None,
-                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None
+                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None,
+                'time_ago': time_ago(app.applied_at)
             }
             
-            # ✅ Include full opportunity data
+            # Include opportunity data
+            if app.opportunity:
+                app_dict['opportunity'] = {
+                    'id': app.opportunity.id,
+                    'title': app.opportunity.title,
+                    'company_name': app.opportunity.company_name,
+                    'type': app.opportunity.type,
+                    'location': app.opportunity.location
+                }
+            else:
+                app_dict['opportunity'] = None
+            
+            result.append(app_dict)
+        
+        return jsonify({
+            'applications': result,
+            'total': len(result)
+        }), 200
+        
+    except Exception as e:
+        print(f"🔴 Error fetching applications: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch applications'}), 500
+
+
+@applications_bp.route('/applications/my', methods=['GET'])
+@jwt_required()
+def get_my_applications():
+    """Get current user's applications with full opportunity data"""
+    try:
+        current_user_id = get_jwt_identity()
+        
+        print(f"🔵 Fetching applications for user: {current_user_id}")
+        
+        applications = Application.query.filter_by(
+            student_id=current_user_id
+        ).order_by(Application.applied_at.desc()).all()
+        
+        result = []
+        for app in applications:
+            app_dict = {
+                'id': app.id,
+                'student_id': app.student_id,
+                'opportunity_id': app.opportunity_id,
+                'full_name': app.full_name,
+                'email': app.email,
+                'phone': app.phone,
+                'course': app.course,
+                'university': app.university,
+                'year_of_study': app.year_of_study,
+                'domain': app.domain,
+                'cover_letter': app.cover_letter,
+                'resume_url': app.resume_url,
+                'status': app.status,
+                'match_score': app.match_score,
+                'admin_notes': app.admin_notes,
+                'applied_at': app.applied_at.isoformat() if app.applied_at else None,
+                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None,
+                'time_ago': time_ago(app.applied_at)
+            }
+            
+            # Include full opportunity data
             if app.opportunity:
                 app_dict['opportunity'] = {
                     'id': app.opportunity.id,
@@ -158,7 +209,8 @@ def get_my_applications():
                 app_dict['opportunity'] = None
             
             result.append(app_dict)
-            print(f"Application {app.id}: {app.status}, Type: {app.opportunity.type if app.opportunity else 'None'}")
+        
+        print(f"🔵 Found {len(result)} applications")
         
         return jsonify({
             'applications': result,
@@ -166,7 +218,9 @@ def get_my_applications():
         }), 200
         
     except Exception as e:
-        print(f"Error fetching applications: {str(e)}")
+        print(f"🔴 Error fetching applications: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': 'Failed to fetch applications'}), 500
 
 
@@ -200,7 +254,7 @@ def update_application_status(id):
         }), 200
         
     except Exception as e:
-        print(f"Error updating application: {str(e)}")
+        print(f"🔴 Error updating application: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to update application'}), 500
 
@@ -225,6 +279,6 @@ def delete_application(id):
         return jsonify({'message': 'Application deleted successfully'}), 200
         
     except Exception as e:
-        print(f"Error deleting application: {str(e)}")
+        print(f"🔴 Error deleting application: {str(e)}")
         db.session.rollback()
         return jsonify({'error': 'Failed to delete application'}), 500

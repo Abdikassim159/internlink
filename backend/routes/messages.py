@@ -259,6 +259,7 @@ def get_messages():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
+        # If admin, get all messages sent by admin
         if user.role == 'admin':
             messages = Message.query.filter_by(
                 sender_id=user_id
@@ -284,6 +285,7 @@ def get_messages():
                 'total': len(result)
             }), 200
         
+        # If student, get messages for student
         messages = Message.query.filter_by(
             student_id=user_id
         ).order_by(
@@ -316,7 +318,9 @@ def get_messages():
         }), 200
         
     except Exception as e:
-        print(f"Error fetching messages: {str(e)}")
+        print(f"🔴 Error fetching messages: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -335,6 +339,7 @@ def get_message(message_id):
         if not message:
             return jsonify({'error': 'Message not found'}), 404
         
+        # Mark as read when viewed
         if not message.is_read:
             message.is_read = True
             db.session.commit()
@@ -354,7 +359,9 @@ def get_message(message_id):
         }), 200
         
     except Exception as e:
-        print(f"Error fetching message: {str(e)}")
+        print(f"🔴 Error fetching message: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -379,7 +386,9 @@ def mark_message_read(message_id):
         return jsonify({'success': True}), 200
         
     except Exception as e:
-        print(f"Error marking message read: {str(e)}")
+        print(f"🔴 Error marking message read: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -404,7 +413,9 @@ def delete_message(message_id):
         return jsonify({'success': True}), 200
         
     except Exception as e:
-        print(f"Error deleting message: {str(e)}")
+        print(f"🔴 Error deleting message: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
@@ -523,5 +534,7 @@ def get_all_students():
         }), 200
         
     except Exception as e:
-        print(f"Error fetching students: {str(e)}")
+        print(f"🔴 Error fetching students: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

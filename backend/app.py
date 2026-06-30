@@ -47,6 +47,7 @@ def create_app():
     from routes.mpesa import mpesa_bp
     from routes.saved import saved_bp
     from routes.messages import messages_bp
+    from routes.notifications import notifications_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(opportunities_bp, url_prefix='/api')
@@ -56,6 +57,7 @@ def create_app():
     app.register_blueprint(mpesa_bp, url_prefix='/api')
     app.register_blueprint(saved_bp, url_prefix='/api')
     app.register_blueprint(messages_bp, url_prefix='/api')
+    app.register_blueprint(notifications_bp, url_prefix='/api')
 
     # Test route
     @app.route('/api/health', methods=['GET'])

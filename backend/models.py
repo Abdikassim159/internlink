@@ -32,6 +32,11 @@ class User(db.Model):
     employer_profile = db.relationship('EmployerProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     applications = db.relationship('Application', backref='student', lazy=True, cascade='all, delete-orphan')
     posted_opportunities = db.relationship('Opportunity', backref='employer', lazy=True, cascade='all, delete-orphan')
+    saved_opportunities = db.relationship('SavedOpportunity', backref='student', lazy=True, cascade='all, delete-orphan')
+    received_messages = db.relationship('Message', foreign_keys='Message.student_id', backref='student', lazy=True, cascade='all, delete-orphan')
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True, cascade='all, delete-orphan')
+    # ===== NOTIFICATION RELATIONSHIP - FIXED =====
+    notification_records = db.relationship('Notification', foreign_keys='Notification.user_id', backref='recipient', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
@@ -228,10 +233,6 @@ class SavedOpportunity(db.Model):
     opportunity_id = db.Column(db.Integer, db.ForeignKey('opportunities.id'), nullable=False)
     saved_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # ===== RELATIONSHIPS =====
-    student = db.relationship('User', foreign_keys=[student_id], backref='saved_opportunities')
-    opportunity = db.relationship('Opportunity', foreign_keys=[opportunity_id], backref='saved_by')
-    
     __table_args__ = (db.UniqueConstraint('student_id', 'opportunity_id', name='unique_saved'),)
 
 
@@ -250,10 +251,6 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Relationships
-    student = db.relationship('User', foreign_keys=[student_id], backref='received_messages')
-    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
-    
     def to_dict(self):
         return {
             'id': self.id,
@@ -267,4 +264,54 @@ class Message(db.Model):
             'is_important': self.is_important,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+
+# ===== NOTIFICATION MODEL - FIXED =====
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # application, message, opportunity, reminder, general
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    link = db.Column(db.String(255))
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        from datetime import datetime
+        now = datetime.utcnow()
+        diff = now - self.created_at if self.created_at else None
+        
+        if diff:
+            if diff.days > 0:
+                if diff.days == 1:
+                    time_ago = 'Yesterday'
+                else:
+                    time_ago = f'{diff.days} days ago'
+            elif diff.seconds < 60:
+                time_ago = 'Just now'
+            elif diff.seconds < 3600:
+                minutes = diff.seconds // 60
+                time_ago = f'{minutes}m ago'
+            else:
+                hours = diff.seconds // 3600
+                time_ago = f'{hours}h ago'
+        else:
+            time_ago = 'Just now'
+        
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'type': self.type,
+            'title': self.title,
+            'message': self.message,
+            'link': self.link,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'time_ago': time_ago
         }

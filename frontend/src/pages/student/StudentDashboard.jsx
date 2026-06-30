@@ -42,7 +42,7 @@ import {
 
 const API_URL = 'http://localhost:5000/api';
 
-// ── Brand palette — shared across the whole app ──
+// ── Brand palette ──
 const BRAND      = '#F5831F';
 const DARK_BG    = '#1C1209';
 const SIDEBAR_BG = '#FBF3E7';
@@ -75,6 +75,11 @@ const StudentDashboard = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isMessageDetailOpen, setIsMessageDetailOpen] = useState(false);
+
+  // ===== NOTIFICATION STATE =====
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
 
   // ===== NOTIFICATION SETTINGS =====
   const [notificationSettings, setNotificationSettings] = useState({
@@ -113,6 +118,52 @@ const StudentDashboard = () => {
     };
   };
 
+  // ===== FETCH NOTIFICATIONS =====
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifs(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/notifications`, getAuthHeaders());
+      
+      setNotifications(response.data.notifications || []);
+      setNotifUnreadCount(response.data.unread_count || 0);
+      setLoadingNotifs(false);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setNotifications([]);
+      setNotifUnreadCount(0);
+      setLoadingNotifs(false);
+    }
+  };
+
+  // ===== MARK NOTIFICATION AS READ =====
+  const handleMarkNotifAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/notifications/${id}/read`, {}, getAuthHeaders());
+      
+      setNotifications(prev => prev.map(n => 
+        n.id === id ? { ...n, is_read: true } : n
+      ));
+      setNotifUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Error marking notification read:', err);
+    }
+  };
+
+  // ===== MARK ALL NOTIFICATIONS AS READ =====
+  const handleMarkAllNotifsAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/notifications/read-all`, {}, getAuthHeaders());
+      
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking all as read:', err);
+    }
+  };
+
   // ===== INITIAL LOAD =====
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -127,7 +178,6 @@ const StudentDashboard = () => {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
 
-      // Load notification settings
       const savedSettings = localStorage.getItem('notificationSettings');
       if (savedSettings) {
         try {
@@ -138,6 +188,7 @@ const StudentDashboard = () => {
       }
 
       loadAllData();
+      fetchNotifications();
     } catch (e) {
       console.error('Error parsing user data:', e);
       navigate('/student-login');
@@ -361,7 +412,7 @@ const StudentDashboard = () => {
     }
   };
 
-  // ===== MARK ALL AS READ =====
+  // ===== MARK ALL MESSAGES AS READ =====
   const handleMarkAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -483,6 +534,9 @@ const StudentDashboard = () => {
     }
     if (tabId === 'messages') {
       fetchMessages();
+    }
+    if (tabId === 'notifications') {
+      fetchNotifications();
     }
   };
 
@@ -624,7 +678,6 @@ const StudentDashboard = () => {
     return 'bg-gray-100 text-gray-600';
   };
 
-  // ===== FIXED: dashboardStats - Saved shows correct count =====
   const dashboardStats = [
     { label: 'Applications', value: stats.applied, sub: stats.applied > 0 ? `${stats.applied} total` : 'No applications yet', subColor: TEXT_DIM, Icon: Briefcase },
     { label: 'Shortlisted',  value: stats.shortlisted, sub: stats.shortlisted > 0 ? 'Great progress' : 'Keep applying', subColor: '#16A34A', Icon: Bookmark },
@@ -636,6 +689,17 @@ const StudentDashboard = () => {
   const profileFields = [user?.phone, user?.location, user?.university, user?.course, user?.bio, user?.skills?.length > 0];
   const filledCount = profileFields.filter(Boolean).length;
   const profileCompletion = Math.round(((filledCount + 1) / (profileFields.length + 1)) * 100);
+
+  // ===== NOTIFICATION ICON HELPER =====
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case 'application': return <Briefcase className="w-5 h-5" style={{ color: BRAND }} />;
+      case 'message': return <MessageSquare className="w-5 h-5" style={{ color: '#6366F1' }} />;
+      case 'opportunity': return <Briefcase className="w-5 h-5" style={{ color: '#10B981' }} />;
+      case 'reminder': return <Clock className="w-5 h-5" style={{ color: '#F59E0B' }} />;
+      default: return <Bell className="w-5 h-5" style={{ color: BRAND }} />;
+    }
+  };
 
   if (loading) {
     return (
@@ -719,12 +783,12 @@ const StudentDashboard = () => {
                       {unreadCount}
                     </span>
                   )}
-                  {item.id === 'notifications' && (
+                  {item.id === 'notifications' && notifUnreadCount > 0 && (
                     <span
                       className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                       style={{ background: BRAND, color: '#fff', minWidth: 18, textAlign: 'center' }}
                     >
-                      5
+                      {notifUnreadCount}
                     </span>
                   )}
                 </button>
@@ -829,12 +893,14 @@ const StudentDashboard = () => {
               style={{ background: isDarkMode ? '#242019' : '#F7F5F1' }}
             >
               <Bell style={{ width: 18, height: 18, color: isDarkMode ? '#D1D5DB' : '#4B5563' }} />
-              <span
-                className="absolute -top-1 -right-1 flex items-center justify-center font-bold text-white rounded-full"
-                style={{ width: 16, height: 16, fontSize: 9, background: BRAND }}
-              >
-                5
-              </span>
+              {notifUnreadCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 flex items-center justify-center font-bold text-white rounded-full"
+                  style={{ width: 16, height: 16, fontSize: 9, background: BRAND }}
+                >
+                  {notifUnreadCount}
+                </span>
+              )}
             </button>
 
             <div className="relative">
@@ -1161,7 +1227,7 @@ const StudentDashboard = () => {
           </p>
         </div>
 
-        {/* Stat cards - FIXED: Shows correct saved count */}
+        {/* Stat cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {dashboardStats.map((stat) => (
             <div
@@ -1377,7 +1443,6 @@ const StudentDashboard = () => {
 
         {/* Bottom row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Stand out to top companies */}
           <div
             className="lg:col-span-2 rounded-2xl p-6 relative overflow-hidden flex items-center justify-between gap-6"
             style={{ background: 'linear-gradient(110deg, #F3E2C8 0%, #FBF2E4 100%)' }}
@@ -1412,7 +1477,6 @@ const StudentDashboard = () => {
             </div>
           </div>
 
-          {/* Upcoming Events */}
           <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold" style={{ fontSize: 14, color: isDarkMode ? '#fff' : '#1A1005' }}>Upcoming Events</h3>
@@ -1799,19 +1863,69 @@ const StudentDashboard = () => {
 
   // ===== NOTIFICATIONS =====
   function renderNotifications() {
+    if (loadingNotifs) {
+      return (
+        <div className="rounded-2xl p-12 text-center" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-transparent mx-auto" style={{ borderColor: `${BRAND} transparent ${BRAND} ${BRAND}` }}></div>
+          <p className="mt-3" style={{ color: TEXT_DIM }}>Loading notifications...</p>
+        </div>
+      );
+    }
+
     return (
       <div className="rounded-2xl p-5" style={{ background: isDarkMode ? '#1E1810' : '#fff', border: `1px solid ${isDarkMode ? '#2A2218' : '#F0EEE9'}` }}>
-        <h2 className="font-bold mb-4" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>Notifications</h2>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: 'rgba(245,131,31,0.06)', border: '1px solid rgba(245,131,31,0.15)' }}>
-            <Bell className="w-5 h-5 mt-0.5" style={{ color: BRAND }} />
-            <div>
-              <p className="font-medium" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>New Application Status</p>
-              <p style={{ fontSize: 12.5, color: TEXT_DIM }}>Your application has been shortlisted.</p>
-              <p style={{ fontSize: 11, color: TEXT_DIM, marginTop: 4 }}>2 hours ago</p>
-            </div>
-          </div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold" style={{ fontSize: 15.5, color: isDarkMode ? '#fff' : '#1A1005' }}>
+            Notifications
+            {notifUnreadCount > 0 && <span style={{ fontSize: 13, fontWeight: 500, color: BRAND, marginLeft: 8 }}>({notifUnreadCount} unread)</span>}
+          </h2>
+          {notifUnreadCount > 0 && (
+            <button onClick={handleMarkAllNotifsAsRead} className="text-xs font-semibold hover:underline" style={{ color: BRAND }}>
+              Mark all as read
+            </button>
+          )}
         </div>
+
+        {notifications.length > 0 ? (
+          <div className="space-y-3">
+            {notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className="flex items-start gap-3 p-3 rounded-xl transition cursor-pointer"
+                style={{
+                  background: !notif.is_read ? 'rgba(245,131,31,0.06)' : 'transparent',
+                  border: `1px solid ${!notif.is_read ? 'rgba(245,131,31,0.15)' : (isDarkMode ? '#2A2218' : '#F0EEE9')}`,
+                }}
+                onClick={() => handleMarkNotifAsRead(notif.id)}
+              >
+                <div className="mt-0.5 flex-shrink-0">
+                  {getNotificationIcon(notif.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium" style={{ fontSize: 13, color: isDarkMode ? '#fff' : '#1A1005' }}>
+                      {notif.title}
+                    </p>
+                    {!notif.is_read && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: BRAND }} />}
+                  </div>
+                  <p style={{ fontSize: 12.5, color: TEXT_DIM }}>{notif.message}</p>
+                  <p style={{ fontSize: 11, color: TEXT_DIM, marginTop: 2 }}>{notif.time_ago || 'Just now'}</p>
+                </div>
+                {notif.link && (
+                  <Link to={notif.link} className="text-xs font-semibold hover:underline flex-shrink-0" style={{ color: BRAND }}>
+                    View
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12" style={{ color: TEXT_DIM }}>
+            <Bell className="w-12 h-12 mx-auto mb-3" style={{ opacity: 0.3 }} />
+            <p className="text-lg font-medium">No Notifications</p>
+            <p className="text-sm">You're all caught up!</p>
+          </div>
+        )}
       </div>
     );
   }
