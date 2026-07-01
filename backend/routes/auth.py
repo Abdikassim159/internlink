@@ -11,6 +11,7 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from services.notification_service import NotificationService  # 👈 ADD THIS IMPORT
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -161,6 +162,10 @@ def register():
         # Send OTP email
         email_sent = send_otp_email(email, otp_code, full_name)
         
+        # 🔔 SEND WELCOME NOTIFICATION (only after OTP is sent)
+        # Note: Notification will be created after verification
+        # We'll create it in the verify_otp function below
+        
         return jsonify({
             'success': True,
             'message': 'Registration successful! Check your email for OTP.',
@@ -222,11 +227,22 @@ def verify_otp():
         user.otp_attempts = 0
         db.session.commit()
         
+        # 🔔 CREATE WELCOME NOTIFICATION AFTER VERIFICATION
+        try:
+            NotificationService.create_welcome_notification(
+                user_id=user.id,
+                user_name=user.full_name or user.email
+            )
+            print(f"✅ Welcome notification sent to {user.email}")
+        except Exception as notif_error:
+            print(f"⚠️ Failed to create welcome notification: {str(notif_error)}")
+            # Don't fail the verification if notification fails
+        
         access_token = create_access_token(identity=user.id)
         
         return jsonify({
             'success': True,
-            'message': 'Account verified successfully!',
+            'message': 'Account verified successfully! Welcome to InternLink! 🎉',
             'access_token': access_token,
             'user': user.to_dict()
         }), 200
@@ -346,4 +362,42 @@ def get_current_user():
         
     except Exception as e:
         print(f"❌ Get user error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== SEND WELCOME NOTIFICATION MANUALLY (Admin Only) =====
+@auth_bp.route('/send-welcome-notification/<int:user_id>', methods=['POST'])
+@jwt_required()
+def send_welcome_notification(user_id):
+    """Admin can manually send welcome notification to a student"""
+    try:
+        current_user_id = get_jwt_identity()
+        admin = User.query.get(current_user_id)
+        
+        if admin.role != 'admin':
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        if user.role != 'student':
+            return jsonify({'error': 'User is not a student'}), 400
+        
+        notification = NotificationService.create_welcome_notification(
+            user_id=user.id,
+            user_name=user.full_name or user.email
+        )
+        
+        if notification:
+            return jsonify({
+                'success': True,
+                'message': f'Welcome notification sent to {user.email}',
+                'notification_id': notification.id
+            }), 200
+        else:
+            return jsonify({'error': 'Failed to create notification'}), 500
+        
+    except Exception as e:
+        print(f"❌ Error sending welcome notification: {str(e)}")
         return jsonify({'error': str(e)}), 500

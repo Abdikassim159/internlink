@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 import logging
+from services.notification_service import NotificationService  # 👈 ADD THIS IMPORT
 
 messages_bp = Blueprint('messages', __name__)
 
@@ -479,10 +480,24 @@ def send_message():
                 print(f"❌ Email error: {str(e)}")
                 email_sent = False
         
+        # 🔔 CREATE IN-APP NOTIFICATION FOR STUDENT
+        try:
+            NotificationService.create_message_notification(
+                user_id=student_id,
+                sender_name=sender_name or sender.full_name or 'Admin',
+                message_preview=message_text,
+                message_id=message.id
+            )
+            print(f"✅ In-app notification created for student {student_id}")
+        except Exception as notif_error:
+            print(f"⚠️ Failed to create in-app notification: {str(notif_error)}")
+            # Don't fail the message send if notification fails
+        
         return jsonify({
             'success': True,
             'message': 'Message sent successfully',
             'email_sent': email_sent,
+            'notification_created': True,
             'data': {
                 'id': message.id,
                 'student_id': message.student_id,
@@ -537,4 +552,37 @@ def get_all_students():
         print(f"🔴 Error fetching students: {str(e)}")
         import traceback
         traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+# ===== ADMIN: GET MESSAGE STATS =====
+@messages_bp.route('/admin/messages/stats', methods=['GET'])
+@jwt_required()
+def get_message_stats():
+    """Get message statistics for admin dashboard"""
+    try:
+        sender_id = get_jwt_identity()
+        sender = User.query.get(sender_id)
+        
+        if not sender or sender.role != 'admin':
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        total_messages = Message.query.count()
+        unread_messages = Message.query.filter_by(is_read=False).count()
+        important_messages = Message.query.filter_by(is_important=True).count()
+        
+        # Messages sent today
+        today = datetime.utcnow().date()
+        today_start = datetime(today.year, today.month, today.day)
+        today_messages = Message.query.filter(Message.created_at >= today_start).count()
+        
+        return jsonify({
+            'total_messages': total_messages,
+            'unread_messages': unread_messages,
+            'important_messages': important_messages,
+            'today_messages': today_messages
+        }), 200
+        
+    except Exception as e:
+        print(f"🔴 Error fetching message stats: {str(e)}")
         return jsonify({'error': str(e)}), 500

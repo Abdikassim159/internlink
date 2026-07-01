@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Application, Opportunity, User
 from datetime import datetime
+from services.notification_service import NotificationService
 
 applications_bp = Blueprint('applications', __name__)
 
@@ -81,6 +82,18 @@ def submit_application():
         db.session.commit()
         
         print(f"✅ Application created with ID: {application.id}")
+        
+        # 🔔 CREATE NOTIFICATION FOR APPLICATION SUBMISSION
+        try:
+            NotificationService.create_application_notification(
+                user_id=current_user_id,
+                opportunity_title=opportunity.title,
+                status='pending'
+            )
+            print(f"✅ Notification created for application submission")
+        except Exception as notif_error:
+            print(f"⚠️ Failed to create notification: {str(notif_error)}")
+            # Don't fail the application if notification fails
         
         return jsonify({
             'message': 'Application submitted successfully',
@@ -243,10 +256,27 @@ def update_application_status(id):
         if new_status not in valid_statuses:
             return jsonify({'error': 'Invalid status'}), 400
         
+        # Store old status for comparison
+        old_status = application.status
+        
+        # Update status
         application.status = new_status
         application.updated_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # 🔔 CREATE NOTIFICATION FOR STATUS CHANGE (only if status actually changed)
+        if old_status != new_status and application.opportunity:
+            try:
+                NotificationService.create_application_notification(
+                    user_id=application.student_id,
+                    opportunity_title=application.opportunity.title,
+                    status=new_status
+                )
+                print(f"✅ Notification created for status change: {old_status} -> {new_status}")
+            except Exception as notif_error:
+                print(f"⚠️ Failed to create notification: {str(notif_error)}")
+                # Don't fail the status update if notification fails
         
         return jsonify({
             'message': 'Application status updated',

@@ -1,4 +1,3 @@
-
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
@@ -48,6 +47,7 @@ def create_app():
     from routes.saved import saved_bp
     from routes.messages import messages_bp
     from routes.notifications import notifications_bp
+    from routes.admin_notifications import admin_notif_bp  # 👈 ADD THIS LINE
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(opportunities_bp, url_prefix='/api')
@@ -58,6 +58,7 @@ def create_app():
     app.register_blueprint(saved_bp, url_prefix='/api')
     app.register_blueprint(messages_bp, url_prefix='/api')
     app.register_blueprint(notifications_bp, url_prefix='/api')
+    app.register_blueprint(admin_notif_bp, url_prefix='/api')  # 👈 ADD THIS LINE
 
     # Test route
     @app.route('/api/health', methods=['GET'])
@@ -71,6 +72,7 @@ def create_app():
     with app.app_context():
         db.create_all()
         print("✅ Database tables created successfully!")
+        print("✅ Admin notifications blueprint registered!")
     
     return app
 
